@@ -1,16 +1,15 @@
 /**
- * Stop configuration. Uses GTFS stop_id format from KORDIS.
- * KORDIS uses U prefix for stop IDs (e.g. U123) per their GTFS convention.
+ * Stop configuration. Uses GTFS stop_id from KORDIS (U prefix convention).
  */
 
-export const GTFS_URL =
-  "https://kordis-jmk.cz/gtfs/gtfs.zip";
-export const VEHICLE_POSITIONS_URL =
-  "https://gis.brno.cz/ags1/rest/services/Hosted/ODAE_public_transit_positional_feature_service/FeatureServer/0";
+import { GTFS_URL, VEHICLE_POSITIONS_BASE } from "./constants.js";
+
+export { GTFS_URL, VEHICLE_POSITIONS_BASE };
+export { VEHICLE_POSITIONS_BASE as VEHICLE_POSITIONS_URL };
 
 export const STOPS = [
-  {
-    stopId: "U1146Z2",
-    name: "Hlavní nádraží",
-  },
+  { stopId: "U1398Z2", name: "Mostecká", direction: "" },
+  { stopId: "U1782Z2", name: "Zdráhalova", direction: "" },
+  { stopId: "U1667Z2", name: "Tomanova", direction: "" },
+  { stopId: "U1211Z8", name: "Jugoslávská", direction: "", lines: ["3"] },
 ];
