@@ -1,6 +1,6 @@
 /**
  * Brno tram display — entry point.
- * Fetches departures for configured stops on a polling loop and renders to terminal.
+ * Runs terminal display on a polling loop + HTTP web server in parallel.
  * Uses KORDIS GTFS + Brno ArcGIS vehicle positions — no API key required.
  *
  * Configure stops via the STOPS environment variable (JSON array) or src/config/stops.js.
@@ -13,11 +13,14 @@
 
 import { fetchDepartures, configure } from "./src/adapters/kordis.js";
 import { STOPS as STOPS_FROM_CONFIG } from "./src/config/stops.js";
+import { startWebServer } from "./src/display/web.js";
 
-const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || "30000", 10);
-const DEPARTURES_PER_STOP = parseInt(process.env.DEPARTURES_PER_STOP || "10", 10);
-const DEPARTURES_WINDOW_MINUTES = parseInt(process.env.DEPARTURES_WINDOW_MINUTES || "90", 10);
-const GTFS_REFRESH_INTERVAL_MS = parseInt(process.env.GTFS_REFRESH_INTERVAL_MS || "86400000", 10);
+const POLL_INTERVAL_MS          = parseInt(process.env.POLL_INTERVAL_MS          || "30000",   10);
+const DEPARTURES_PER_STOP       = parseInt(process.env.DEPARTURES_PER_STOP       || "10",      10);
+const DEPARTURES_WINDOW_MINUTES = parseInt(process.env.DEPARTURES_WINDOW_MINUTES || "90",      10);
+const GTFS_REFRESH_INTERVAL_MS  = parseInt(process.env.GTFS_REFRESH_INTERVAL_MS  || "86400000",10);
+const PORT                      = parseInt(process.env.PORT                      || "3000",    10);
+const DISPLAY_MODE              = process.env.DISPLAY_MODE || "default"; // "default" | "web" | "both"
 
 /**
  * Resolve stop list: STOPS env var (JSON) takes priority over config file.
@@ -51,9 +54,6 @@ configure({
     windowMinutes: DEPARTURES_WINDOW_MINUTES,
 });
 
-/**
- * Format a Date as HH:MM in Europe/Prague timezone.
- */
 function formatTime(date) {
     return date.toLocaleTimeString("cs-CZ", {
         timeZone: "Europe/Prague",
@@ -63,49 +63,34 @@ function formatTime(date) {
     });
 }
 
-/**
- * Format delay as a human-readable string with colour coding.
- */
 function formatDelay(delaySeconds, isRealtime) {
     if (!isRealtime) return `${DIM}[scheduled]${RESET}`;
     const mins = Math.round(delaySeconds / 60);
     if (mins === 0) return `${GREEN}on time${RESET}`;
-    if (mins > 0) return `${YELLOW}+${mins} min${RESET}`;
+    if (mins > 0)   return `${YELLOW}+${mins} min${RESET}`;
     return `${GREEN}${Math.abs(mins)} min early${RESET}`;
 }
 
-/**
- * Accent/case-insensitive normalisation for headsign matching.
- */
 function norm(s) {
     return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 /**
  * Apply direction and lines filters to a departure list.
- * direction — headsign substring match (optional)
- * lines     — whitelist of routeShortName strings (optional)
  */
 function applyFilters(departures, { direction, lines }) {
     let result = departures;
-
     if (direction) {
         const needle = norm(direction);
         result = result.filter((dep) => norm(dep.headsign).includes(needle));
     }
-
     if (lines && lines.length > 0) {
-        // normalise to strings so config ["3"] matches routeShortName "3"
         const allowed = new Set(lines.map(String));
         result = result.filter((dep) => allowed.has(String(dep.routeShortName)));
     }
-
     return result;
 }
 
-/**
- * Build a concise label showing active filters for the header line.
- */
 function filterLabel(stop) {
     const parts = [];
     if (stop.direction) parts.push(`→ ${stop.direction}`);
@@ -113,20 +98,14 @@ function filterLabel(stop) {
     return parts.length > 0 ? `  ${parts.join("  ")}` : "";
 }
 
-/**
- * Render all stops and their departures to stdout.
- */
-function renderDepartures(stopResults) {
-    // clear screen so it reads like a real departure board
+function renderTerminal(stopResults) {
     process.stdout.write("\x1b[2J\x1b[H");
-
     const now = new Date();
     console.log(`${BOLD}${CYAN}Brno Tram Display${RESET}  ${DIM}updated ${formatTime(now)}${RESET}\n`);
 
     for (const { stop, departures, error } of stopResults) {
         console.log(`${BOLD}${stop.name}${RESET}${CYAN}${filterLabel(stop)}${RESET}  ${DIM}(${stop.stopId})${RESET}`);
         console.log("─".repeat(60));
-
         if (error) {
             console.log(`  ${RED}error: ${error}${RESET}`);
         } else if (departures.length === 0) {
@@ -144,9 +123,6 @@ function renderDepartures(stopResults) {
     }
 }
 
-/**
- * Fetch and filter departures for all configured stops in parallel.
- */
 async function fetchAllStops() {
     return Promise.all(
         STOPS.map(async (stop) => {
@@ -165,12 +141,12 @@ async function fetchAllStops() {
     );
 }
 
-/**
- * One poll cycle: fetch and render.
- */
 async function tick() {
     const results = await fetchAllStops();
-    renderDepartures(results);
+    // terminal output unless web-only mode
+    if (DISPLAY_MODE !== "web") {
+        renderTerminal(results);
+    }
 }
 
 async function main() {
@@ -178,6 +154,11 @@ async function main() {
     console.log(`brno-tram-display starting — ${STOPS.length} stop(s): ${stopSummary}`);
     console.log(`polling every ${POLL_INTERVAL_MS / 1000}s\n`);
     console.log("downloading GTFS data (first run may take a few seconds)…\n");
+
+    // start web server unless terminal-only mode
+    if (DISPLAY_MODE !== "default") {
+        startWebServer(STOPS, PORT);
+    }
 
     await tick();
     setInterval(tick, POLL_INTERVAL_MS);
