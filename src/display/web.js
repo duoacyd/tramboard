@@ -54,7 +54,6 @@ function renderHtml(departures) {
         return `<tr>
   <td>${htmlEscape(d.stopName)}</td>
   <td>${htmlEscape(d.routeShortName)}</td>
-  <td>${htmlEscape(d.headsign)}</td>
   <td>${formatTime(d.time)}</td>
   <td class="mins" data-time="${iso}">—</td>
 </tr>`;
@@ -80,44 +79,33 @@ table{
   width:100%;
   border-collapse:collapse;
 }
-th{
-  text-align:left;
-  font-size:13px;
-  color:#555;
-  letter-spacing:.1em;
-  text-transform:uppercase;
-  padding:0 0 12px;
-  border-bottom:1px solid #222;
-}
 td{
   padding:14px 0;
   border-bottom:1px solid #1a1a1a;
   vertical-align:middle;
 }
-td:nth-child(1){color:#888;font-size:16px;padding-right:20px;white-space:nowrap}
+td:nth-child(1){color:#aaa;font-size:20px;padding-right:20px;white-space:nowrap}
 td:nth-child(2){font-weight:700;color:#fff;padding-right:16px;width:52px}
-td:nth-child(3){color:#c8c8c8;padding-right:20px}
-td:nth-child(4){color:#fff;white-space:nowrap;width:60px}
-td:nth-child(5){color:#555;font-size:16px;text-align:right;white-space:nowrap;width:70px}
+td:nth-child(3){color:#fff;white-space:nowrap;width:60px}
+td:nth-child(4){color:#555;font-size:16px;text-align:right;white-space:nowrap;width:80px}
 </style>
 </head>
 <body>
 <table>
-<thead><tr>
-  <th>stop</th>
-  <th>line</th>
-  <th>to</th>
-  <th>time</th>
-  <th></th>
-</tr></thead>
 <tbody>${rows}</tbody>
 </table>
 <script>
 (function(){
+  function fmt(diff){
+    if(diff<=0) return 'now';
+    if(diff<60) return 'in '+diff+'m';
+    var h=Math.floor(diff/60), m=diff%60;
+    return 'in '+h+'h'+(m?'\u00a0'+m+'m':'');
+  }
   function tick(){
     document.querySelectorAll('.mins[data-time]').forEach(function(el){
       var diff=Math.round((new Date(el.dataset.time)-new Date())/60000);
-      el.textContent=diff<=0?'now':'in '+diff+'m';
+      el.textContent=fmt(diff);
     });
   }
   tick();
