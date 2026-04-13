@@ -2,6 +2,8 @@ services:
   tram-display:
     build: .
     restart: unless-stopped
+    ports:
+      - "3001:3000"
     environment:
       POLL_INTERVAL_MS: 30000
       DEPARTURES_PER_STOP: 10
