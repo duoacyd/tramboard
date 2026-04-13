@@ -51,10 +51,12 @@ async function getAllDepartures(stops, windowMinutes) {
 function renderHtml(departures) {
     const rows = departures.map((d) => {
         const iso = d.time.toISOString();
+        const delayMins = d.isRealtime ? Math.round(d.delaySeconds / 60) : 0;
+        const delayBadge = delayMins > 0 ? `<span class="delay">+${delayMins}m</span>` : "";
         return `<tr>
   <td>${htmlEscape(d.stopName)}</td>
   <td>${htmlEscape(d.routeShortName)}</td>
-  <td>${formatTime(d.time)}</td>
+  <td>${formatTime(d.time)}${delayBadge}</td>
   <td class="mins" data-time="${iso}">—</td>
 </tr>`;
     }).join("");
@@ -88,6 +90,7 @@ td:nth-child(1){color:#aaa;font-size:20px;padding-right:20px;white-space:nowrap}
 td:nth-child(2){font-weight:700;color:#fff;padding-right:16px;width:52px}
 td:nth-child(3){color:#fff;white-space:nowrap;width:60px}
 td:nth-child(4){color:#555;font-size:16px;text-align:right;white-space:nowrap;width:80px}
+.delay{color:#e87c2a;font-size:14px;margin-left:6px}
 </style>
 </head>
 <body>
