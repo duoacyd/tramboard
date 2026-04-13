@@ -5,12 +5,10 @@
 import { TIMEZONE } from "../config/constants.js";
 
 /**
- * Current time in Europe/Prague.
+ * Current time (real UTC Date, kept for callers that need a Date reference).
  */
 export function nowInPrague() {
-  return new Date(
-    new Date().toLocaleString("en-US", { timeZone: TIMEZONE })
-  );
+  return new Date();
 }
 
 /**
@@ -46,16 +44,28 @@ export function minutesSinceMidnightPrague(d) {
 }
 
 /**
- * Build a Date from Prague base date + minutes since midnight.
+ * Build a correct UTC Date from a Prague calendar date + minutes since Prague midnight.
+ *
+ * The GTFS minutes are Prague local time. We must subtract the Prague UTC offset
+ * so that formatTime (which re-applies the Prague timezone) shows the right time.
  */
 export function dateFromMinutesSinceMidnight(baseDate, minutes) {
-  const d = new Date(baseDate);
   const totalMins = Math.floor(minutes);
-  d.setHours(
-    Math.floor(totalMins / 60),
-    totalMins % 60,
-    Math.round((minutes % 1) * 60),
-    0
-  );
-  return d;
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  const s = Math.round((minutes % 1) * 60);
+
+  // Get the Prague calendar date (YYYY-MM-DD) for baseDate
+  const dateStr = baseDate.toLocaleDateString("en-CA", { timeZone: TIMEZONE });
+  const [year, month, day] = dateStr.split("-").map(Number);
+
+  // Build "Prague wall clock as UTC" milliseconds
+  const wallClockAsUtcMs = Date.UTC(year, month - 1, day, h, m, s);
+
+  // Compute the Prague UTC offset at baseDate (e.g. +7200000 for CEST)
+  const pragueSv = new Date(baseDate).toLocaleString("sv", { timeZone: TIMEZONE });
+  const wallOfBaseMs = new Date(pragueSv.replace(" ", "T") + "Z").getTime();
+  const utcOffsetMs = wallOfBaseMs - baseDate.getTime();
+
+  return new Date(wallClockAsUtcMs - utcOffsetMs);
 }
