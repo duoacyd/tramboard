@@ -1,13 +1,16 @@
 /**
- * HTTP server — HTML departure board + JSON API.
+ * HTTP server — minimal dark departure board + JSON API.
  *
- * GET /                  → HTML board (human-readable)
- * GET /api/departures    → JSON (for widgets, apps)
+ * GET /                  → HTML board
+ * GET /api/departures    → JSON
  */
 
 import http from "http";
 import { fetchDepartures } from "../adapters/kordis.js";
 import { applyFilters } from "./terminal.js";
+
+const TIMEZONE = "Europe/Prague";
+const MAX_ROWS = 5;
 
 function htmlEscape(s) {
     return String(s ?? "")
@@ -19,113 +22,136 @@ function htmlEscape(s) {
 
 function formatTime(date) {
     return date.toLocaleTimeString("cs-CZ", {
-        timeZone: "Europe/Prague",
+        timeZone: TIMEZONE,
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
     });
 }
 
-async function getDepartures(stops, windowMinutes) {
-    return Promise.all(
+async function getAllDepartures(stops, windowMinutes) {
+    const results = await Promise.all(
         stops.map(async (stop) => {
             try {
                 let deps = await fetchDepartures(stop.stopId, null, { windowMinutes });
                 deps = applyFilters(deps, stop);
-                deps.sort((a, b) => a.time - b.time);
-                return { stop, departures: deps, error: null };
-            } catch (err) {
-                return { stop, departures: [], error: err.message };
+                return deps.map((d) => ({ ...d, stopName: stop.name }));
+            } catch {
+                return [];
             }
         })
     );
+
+    return results
+        .flat()
+        .sort((a, b) => a.time - b.time)
+        .slice(0, MAX_ROWS);
 }
 
-function renderHtml(stopResults, windowMinutes) {
-    const rows = stopResults.flatMap(({ stop, departures, error }) => {
-        const header = `<tr><th colspan="4">${htmlEscape(stop.name)} (${htmlEscape(stop.stopId)})</th></tr>`;
-        if (error) {
-            return [header, `<tr><td colspan="4" class="error">${htmlEscape(error)}</td></tr>`];
-        }
-        if (departures.length === 0) {
-            return [header, `<tr><td colspan="4" class="dim">no departures in the next ${windowMinutes} minutes</td></tr>`];
-        }
-        return [
-            header,
-            ...departures.slice(0, 15).map(
-                (d) => `<tr>
-          <td><strong>${htmlEscape(d.routeShortName)}</strong></td>
-          <td>${htmlEscape(d.headsign)}</td>
-          <td>${formatTime(d.time)}</td>
-          <td>${d.isRealtime ? `+${Math.round(d.delaySeconds / 60)} min` : "scheduled"}</td>
-        </tr>`
-            ),
-        ];
-    });
+function renderHtml(departures) {
+    const rows = departures.map((d) => {
+        const iso = d.time.toISOString();
+        return `<tr>
+  <td>${htmlEscape(d.stopName)}</td>
+  <td>${htmlEscape(d.routeShortName)}</td>
+  <td>${htmlEscape(d.headsign)}</td>
+  <td>${formatTime(d.time)}</td>
+  <td class="mins" data-time="${iso}">—</td>
+</tr>`;
+    }).join("");
 
     return `<!DOCTYPE html>
-<html>
+<html lang="cs">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="refresh" content="30">
-  <title>Brno Tram Display</title>
-  <style>
-    body { font-family: system-ui; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #eee; }
-    th { background: #1a5f7a; color: #fff; }
-    .error { color: #c00; }
-    .dim { color: #999; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta http-equiv="refresh" content="30">
+<title>Trams</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#0d0d0d;
+  color:#c8c8c8;
+  font-family:monospace;
+  font-size:22px;
+  padding:24px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+th{
+  text-align:left;
+  font-size:13px;
+  color:#555;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  padding:0 0 12px;
+  border-bottom:1px solid #222;
+}
+td{
+  padding:14px 0;
+  border-bottom:1px solid #1a1a1a;
+  vertical-align:middle;
+}
+td:nth-child(1){color:#888;font-size:16px;padding-right:20px;white-space:nowrap}
+td:nth-child(2){font-weight:700;color:#fff;padding-right:16px;width:52px}
+td:nth-child(3){color:#c8c8c8;padding-right:20px}
+td:nth-child(4){color:#fff;white-space:nowrap;width:60px}
+td:nth-child(5){color:#555;font-size:16px;text-align:right;white-space:nowrap;width:70px}
+</style>
 </head>
 <body>
-  <h1>Brno Tram Display</h1>
-  <p style="color:#999;font-size:0.85rem">updated ${new Date().toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" })} · auto-refreshes every 30s</p>
-  <table><tbody>${rows.join("")}</tbody></table>
+<table>
+<thead><tr>
+  <th>stop</th>
+  <th>line</th>
+  <th>to</th>
+  <th>time</th>
+  <th></th>
+</tr></thead>
+<tbody>${rows}</tbody>
+</table>
+<script>
+(function(){
+  function tick(){
+    document.querySelectorAll('.mins[data-time]').forEach(function(el){
+      var diff=Math.round((new Date(el.dataset.time)-new Date())/60000);
+      el.textContent=diff<=0?'now':'in '+diff+'m';
+    });
+  }
+  tick();
+  setInterval(tick,15000);
+})();
+</script>
 </body>
 </html>`;
 }
 
-function renderJson(stopResults) {
-    const updatedAt = new Date().toISOString();
+function renderJson(departures) {
     return JSON.stringify({
-        updatedAt,
-        stops: stopResults.map(({ stop, departures, error }) => ({
-            stopId: stop.stopId,
-            name: stop.name,
-            error: error ?? null,
-            departures: departures.slice(0, 15).map((d) => ({
-                line: d.routeShortName,
-                headsign: d.headsign,
-                // ISO timestamp — easiest to parse in any language/widget
-                time: d.time.toISOString(),
-                // convenience: minutes from now (negative = already departed)
-                minutesFromNow: Math.round((d.time - new Date()) / 60000),
-                isRealtime: d.isRealtime,
-                delayMinutes: Math.round(d.delaySeconds / 60),
-            })),
+        updatedAt: new Date().toISOString(),
+        departures: departures.map((d) => ({
+            stop: d.stopName,
+            line: d.routeShortName,
+            headsign: d.headsign,
+            time: d.time.toISOString(),
+            minutesFromNow: Math.round((d.time - new Date()) / 60000),
+            isRealtime: d.isRealtime,
+            delayMinutes: Math.round(d.delaySeconds / 60),
         })),
     });
 }
 
 async function handleRequest(stops, windowMinutes, url) {
     if (url === "/api/departures") {
-        const stopResults = await getDepartures(stops, windowMinutes);
-        return {
-            status: 200,
-            contentType: "application/json; charset=utf-8",
-            body: renderJson(stopResults),
-        };
+        const deps = await getAllDepartures(stops, windowMinutes);
+        return { status: 200, contentType: "application/json; charset=utf-8", body: renderJson(deps) };
     }
 
     if (url === "/" || url === "/index.html") {
-        const stopResults = await getDepartures(stops, windowMinutes);
-        return {
-            status: 200,
-            contentType: "text/html; charset=utf-8",
-            body: renderHtml(stopResults, windowMinutes),
-        };
+        const deps = await getAllDepartures(stops, windowMinutes);
+        return { status: 200, contentType: "text/html; charset=utf-8", body: renderHtml(deps) };
     }
 
     return { status: 404, contentType: "text/plain", body: "Not found" };
@@ -133,7 +159,6 @@ async function handleRequest(stops, windowMinutes, url) {
 
 export function startWebServer(stops, port, windowMinutes = 90) {
     const server = http.createServer(async (req, res) => {
-        // strip query string for routing
         const url = (req.url ?? "/").split("?")[0];
         try {
             const { status, contentType, body } = await handleRequest(stops, windowMinutes, url);
