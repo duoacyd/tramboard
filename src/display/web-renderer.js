@@ -165,6 +165,7 @@ const CLIENT_JS = `
   tickCountdowns();
   tickClock();
   setInterval(tickClock,1000);
+  setInterval(tickCountdowns,10000);
   setInterval(refreshWeather,600000);
   setInterval(applyMode,60000);
 })();
