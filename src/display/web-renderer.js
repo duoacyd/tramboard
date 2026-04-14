@@ -133,9 +133,32 @@ const CLIENT_JS = `
     if(fp) currentFp=fp;
     evt.detail.shouldSwap=false;
     var tbody=evt.detail.target;
-    tbody.querySelectorAll('tr').forEach(function(tr){tr.classList.add('exit');});
-    var html=evt.detail.serverResponse;
-    setTimeout(function(){tbody.innerHTML=html;tickCountdowns();},220);
+    var tmp=document.createElement('tbody');
+    tmp.innerHTML=evt.detail.serverResponse;
+    var newRows=Array.from(tmp.querySelectorAll('tr'));
+    var oldMap={};
+    tbody.querySelectorAll('tr').forEach(function(tr){if(tr.dataset.key)oldMap[tr.dataset.key]=tr;});
+    var newKeys=new Set(newRows.map(function(tr){return tr.dataset.key;}).filter(Boolean));
+    Object.keys(oldMap).forEach(function(key){if(!newKeys.has(key))oldMap[key].classList.add('exit');});
+    setTimeout(function(){
+      var frag=document.createDocumentFragment();
+      newRows.forEach(function(newTr){
+        var key=newTr.dataset.key;
+        if(key&&oldMap[key]){
+          var oldTr=oldMap[key];
+          var om=oldTr.querySelector('.mins'),nm=newTr.querySelector('.mins');
+          if(om&&nm)om.dataset.time=nm.dataset.time;
+          var ot=oldTr.querySelector('.time'),nt=newTr.querySelector('.time');
+          if(ot&&nt)ot.innerHTML=nt.innerHTML;
+          frag.appendChild(oldTr);
+        }else{
+          frag.appendChild(newTr);
+        }
+      });
+      tbody.innerHTML='';
+      tbody.appendChild(frag);
+      tickCountdowns();
+    },220);
   });
   requestAnimationFrame(function(){requestAnimationFrame(function(){document.body.classList.remove('no-transition');});});
   tickCountdowns();
@@ -166,14 +189,15 @@ function buildRow(d) {
   const logoHtml = d.stopLogo
     ? `<img src="/res/${htmlEscape(d.stopLogo)}" alt="" style="height:0.8em;vertical-align:middle;margin-left:0.35em;opacity:0.85">`
     : "";
-  return { iso, delayBadge, logoHtml };
+  const key = `${htmlEscape(d.routeShortName)}-${iso}`;
+  return { iso, key, delayBadge, logoHtml };
 }
 
 /** Initial page render — no animation classes. */
 function buildRows(departures) {
   return departures.map((d) => {
-    const { iso, delayBadge, logoHtml } = buildRow(d);
-    return `<tr>
+    const { iso, key, delayBadge, logoHtml } = buildRow(d);
+    return `<tr data-key="${key}">
   <td class="line">${htmlEscape(d.routeShortName)}</td>
   <td class="stop">${htmlEscape(d.stopName)}${logoHtml}</td>
   <td class="mins" data-time="${iso}">—</td>
@@ -182,11 +206,11 @@ function buildRows(departures) {
   }).join("");
 }
 
-/** HTMX fragment — rows include enter animation classes and stagger delays. */
+/** HTMX fragment — new rows get enter animation; existing rows are identified by data-key. */
 export function renderRows(departures) {
-  return departures.map((d, i) => {
-    const { iso, delayBadge, logoHtml } = buildRow(d);
-    return `<tr class="enter" style="animation-delay:${i * 60}ms">
+  return departures.map((d) => {
+    const { iso, key, delayBadge, logoHtml } = buildRow(d);
+    return `<tr class="enter" data-key="${key}">
   <td class="line">${htmlEscape(d.routeShortName)}</td>
   <td class="stop">${htmlEscape(d.stopName)}${logoHtml}</td>
   <td class="mins" data-time="${iso}">—</td>
