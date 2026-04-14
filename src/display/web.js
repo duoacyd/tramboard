@@ -32,7 +32,7 @@ async function serveStatic(filename) {
 }
 
 function rowsFingerprint(deps) {
-  return deps.map(d => `${d.routeShortName}|${d.stopName}|${d.time.toISOString()}`).join(",");
+  return deps.map(d => d.tripId ?? `${d.routeShortName}|${d.stopName}|${d.time.toISOString()}`).join(",");
 }
 
 async function handleRequest(stops, windowMinutes, url, headers) {

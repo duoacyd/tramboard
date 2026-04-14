@@ -190,7 +190,7 @@ function buildRow(d) {
   const logoHtml = d.stopLogo
     ? `<img src="/res/${htmlEscape(d.stopLogo)}" alt="" style="height:0.8em;vertical-align:middle;margin-left:0.35em;opacity:0.85">`
     : "";
-  const key = `${htmlEscape(d.routeShortName)}-${iso}`;
+  const key = d.tripId ? htmlEscape(d.tripId) : `${htmlEscape(d.routeShortName)}-${iso}`;
   return { iso, key, delayBadge, logoHtml };
 }
 
