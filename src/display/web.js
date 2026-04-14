@@ -9,7 +9,31 @@ import http from "http";
 import { getAllDepartures, getWeather } from "./web-data.js";
 import { renderHtml, renderJson } from "./web-renderer.js";
 
+// explicit allowlist — never resolve arbitrary filenames from user input
+const STATIC_FILES = new Set(["Albert_logo.svg.png", "Lidl-Logo.svg.png"]);
+
+async function serveStatic(filename) {
+  if (!STATIC_FILES.has(filename)) {
+    return { status: 404, contentType: "text/plain", body: "Not found" };
+  }
+  const { readFile } = await import("fs/promises");
+  const { join, resolve, dirname } = await import("path");
+  const { fileURLToPath } = await import("url");
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const filePath = resolve(join(__dirname, "../../res", filename));
+  try {
+    const data = await readFile(filePath);
+    return { status: 200, contentType: "image/png", body: data };
+  } catch {
+    return { status: 404, contentType: "text/plain", body: "Not found" };
+  }
+}
+
 async function handleRequest(stops, windowMinutes, url) {
+  if (url.startsWith("/res/")) {
+    return serveStatic(url.slice(5));
+  }
+
   if (url === "/api/departures") {
     const deps = await getAllDepartures(stops, windowMinutes);
     return { status: 200, contentType: "application/json; charset=utf-8", body: renderJson(deps) };
