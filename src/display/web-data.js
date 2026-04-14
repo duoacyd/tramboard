@@ -27,7 +27,7 @@ export async function getAllDepartures(stops, windowMinutes) {
             );
           }
         }
-        return deps.map((d) => ({ ...d, stopName: stop.name }));
+        return deps.map((d) => ({ ...d, stopName: stop.name, stopLogo: stop.logo ?? null }));
       } catch (err) {
         console.warn(`[web-data] fetchDepartures failed for ${stop.stopId}:`, err.message);
         return [];
