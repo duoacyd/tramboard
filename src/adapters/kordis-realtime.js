@@ -9,6 +9,8 @@ import {
   VTYPE_TRAM,
 } from "../config/constants.js";
 
+const DEBUG = !!process.env.DEBUG;
+
 let cachedDelays = null;
 let cacheTime = 0;
 
@@ -41,8 +43,9 @@ async function fetchVehiclePositions() {
     throw new Error(`vehicle positions api error: ${json.error.message ?? JSON.stringify(json.error)}`);
   }
 
+  const features = json.features ?? [];
   const delays = new Map();
-  for (const f of json.features ?? []) {
+  for (const f of features) {
     const attrs = f.attributes ?? {};
     if (isInactive(attrs) || Number(attrs.vtype) !== VTYPE_TRAM) continue;
 
@@ -54,12 +57,21 @@ async function fetchVehiclePositions() {
     const existing = delays.get(key) ?? 0;
     if (delay > existing) delays.set(key, Math.round(delay));
   }
+
+  const delayed = [...delays.values()].filter((d) => d > 0).length;
+  console.log(`[realtime] ${features.length} vehicles → ${delays.size} tram lines tracked, ${delayed} delayed`);
+  if (DEBUG && delays.size > 0) {
+    const summary = [...delays.entries()].map(([k, v]) => `${k}:+${v}min`).join(" ");
+    console.debug(`[realtime] delays: ${summary}`);
+  }
+
   return delays;
 }
 
 export async function getDelaysByLine() {
   const now = Date.now();
   if (cachedDelays !== null && now - cacheTime < CACHE_TTL_REALTIME_MS) {
+    if (DEBUG) console.debug(`[realtime] cache hit (${Math.round((CACHE_TTL_REALTIME_MS - (now - cacheTime)) / 1000)}s remaining)`);
     return cachedDelays;
   }
   try {
@@ -67,7 +79,11 @@ export async function getDelaysByLine() {
     cacheTime = now;
     return cachedDelays;
   } catch (err) {
-    if (cachedDelays !== null) return cachedDelays;
+    console.warn("[realtime] fetch failed:", err.message);
+    if (cachedDelays !== null) {
+      console.warn("[realtime] using stale cache");
+      return cachedDelays;
+    }
     throw err;
   }
 }

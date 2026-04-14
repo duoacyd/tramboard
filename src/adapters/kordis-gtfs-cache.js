@@ -136,18 +136,31 @@ function buildLookups(stops, routes, trips, stopTimes, calendar) {
   const routesMap = buildRoutesMap(routes);
   const tripsMap = buildTripsMap(trips, routesMap, activeServiceIds);
   const stopTimesByStop = buildStopTimesByStop(stopTimes, tripsMap);
+  console.log(
+    `[gtfs] parsed: ${stopsMap.size} stops, ${routesMap.size} routes, ` +
+    `${trips.length} trips (${tripsMap.size} active today), ` +
+    `${stopTimes.length} stop_times → ${stopTimesByStop.size} stops with departures`
+  );
   return { stopsMap, stopTimesByStop };
 }
 
 async function ensureCache() {
   const now = Date.now();
-  if (cache && now - lastFetchTime < refreshIntervalMs) return cache;
+  if (cache && now - lastFetchTime < refreshIntervalMs) {
+    if (DEBUG) console.debug(`[gtfs] cache hit (age ${Math.round((now - lastFetchTime) / 60000)}min)`);
+    return cache;
+  }
 
+  console.log(`[gtfs] downloading from ${GTFS_URL} …`);
+  const t0 = Date.now();
   const res = await fetch(GTFS_URL);
   if (!res.ok) {
     throw new Error(`gtfs download failed: ${res.status} ${res.statusText} for ${GTFS_URL}`);
   }
-  const zip = new AdmZip(Buffer.from(await res.arrayBuffer()));
+  const buf = Buffer.from(await res.arrayBuffer());
+  console.log(`[gtfs] downloaded ${(buf.byteLength / 1024 / 1024).toFixed(1)} MB in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+
+  const zip = new AdmZip(buf);
 
   const stops = extractAndParse(zip, "stops.txt");
   const routes = extractAndParse(zip, "routes.txt");
@@ -162,6 +175,8 @@ async function ensureCache() {
 
   cache = buildLookups(stops, routes, trips, stopTimes, calendar);
   lastFetchTime = now;
+  const nextRefreshMin = Math.round(refreshIntervalMs / 60000);
+  console.log(`[gtfs] next refresh in ${nextRefreshMin >= 60 ? (nextRefreshMin / 60).toFixed(0) + "h" : nextRefreshMin + "min"}`);
   return cache;
 }
 
