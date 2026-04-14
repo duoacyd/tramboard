@@ -45,6 +45,7 @@ async function getAllDepartures(stops, windowMinutes) {
     return results
         .flat()
         .sort((a, b) => a.time - b.time)
+        .filter((d) => Math.round((d.time - new Date()) / 60000) > 1)
         .slice(0, MAX_ROWS);
 }
 
@@ -89,6 +90,7 @@ td{
 td.line{font-weight:700;color:#fff;padding-right:28px;white-space:nowrap;width:80px}
 td.stop{color:#aaa;font-size:50px;padding-right:28px;white-space:nowrap}
 td.mins{color:#e87c2a;font-size:38px;white-space:nowrap;width:160px}
+td.mins .n{font-size:54px;font-weight:700;color:#f5c87a}
 td.time{color:#fff;text-align:right;white-space:nowrap;width:160px}
 .delay{color:#e87c2a;font-size:34px;margin-left:10px}
 #clock{font-size:56px;font-weight:700;color:#fff;margin-bottom:24px;letter-spacing:0.04em}
@@ -101,16 +103,17 @@ td.time{color:#fff;text-align:right;white-space:nowrap;width:160px}
 </table>
 <script>
 (function(){
+  function n(v){return '<span class="n">'+v+'</span>';}
   function fmt(diff){
     if(diff<=0) return 'now';
-    if(diff<60) return 'in '+diff+'m';
+    if(diff<60) return 'in '+n(diff)+'m';
     var h=Math.floor(diff/60), m=diff%60;
-    return 'in '+h+'h'+(m?'\u00a0'+m+'m':'');
+    return 'in '+n(h)+'h'+(m?'\u00a0'+n(m)+'m':'');
   }
   function tick(){
     document.querySelectorAll('.mins[data-time]').forEach(function(el){
       var diff=Math.round((new Date(el.dataset.time)-new Date())/60000);
-      el.textContent=fmt(diff);
+      el.innerHTML=fmt(diff);
     });
     var now=new Date();
     document.getElementById('clock').textContent=
