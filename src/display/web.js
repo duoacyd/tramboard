@@ -54,10 +54,10 @@ function renderHtml(departures) {
         const delayMins = d.isRealtime ? Math.round(d.delaySeconds / 60) : 0;
         const delayBadge = delayMins > 0 ? `<span class="delay">+${delayMins}m</span>` : "";
         return `<tr>
-  <td>${htmlEscape(d.stopName)}</td>
-  <td>${htmlEscape(d.routeShortName)}</td>
-  <td>${formatTime(d.time)}${delayBadge}</td>
+  <td class="line">${htmlEscape(d.routeShortName)}</td>
+  <td class="stop">${htmlEscape(d.stopName)}</td>
   <td class="mins" data-time="${iso}">—</td>
+  <td class="time">${formatTime(d.time)}${delayBadge}</td>
 </tr>`;
     }).join("");
 
@@ -86,14 +86,16 @@ td{
   border-bottom:1px solid #1a1a1a;
   vertical-align:middle;
 }
-td:nth-child(1){color:#aaa;font-size:50px;padding-right:28px;white-space:nowrap}
-td:nth-child(2){font-weight:700;color:#fff;padding-right:24px;width:80px}
-td:nth-child(3){color:#fff;white-space:nowrap;width:120px}
-td:nth-child(4){color:#555;font-size:38px;text-align:right;white-space:nowrap;width:120px}
+td.line{font-weight:700;color:#fff;padding-right:28px;white-space:nowrap;width:80px}
+td.stop{color:#aaa;font-size:50px;padding-right:28px;white-space:nowrap}
+td.mins{color:#e87c2a;font-size:38px;white-space:nowrap;width:160px}
+td.time{color:#fff;text-align:right;white-space:nowrap;width:160px}
 .delay{color:#e87c2a;font-size:34px;margin-left:10px}
+#clock{font-size:56px;font-weight:700;color:#fff;margin-bottom:24px;letter-spacing:0.04em}
 </style>
 </head>
 <body>
+<div id="clock">—</div>
 <table>
 <tbody>${rows}</tbody>
 </table>
@@ -110,6 +112,9 @@ td:nth-child(4){color:#555;font-size:38px;text-align:right;white-space:nowrap;wi
       var diff=Math.round((new Date(el.dataset.time)-new Date())/60000);
       el.textContent=fmt(diff);
     });
+    var now=new Date();
+    document.getElementById('clock').textContent=
+      now.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Europe/Prague'});
   }
   tick();
   setInterval(tick,15000);
