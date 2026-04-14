@@ -53,8 +53,12 @@ async function fetchAllStops() {
   );
 }
 
+const DEBUG = !!process.env.DEBUG;
+
 async function tick() {
+  const t0 = Date.now();
   const results = await fetchAllStops();
+  if (DEBUG) console.debug(`[tick] fetched all stops in ${Date.now() - t0}ms`);
   if (DISPLAY_MODE !== "web") {
     renderTerminal(results, {
       departuresPerStop: DEPARTURES_PER_STOP,
@@ -65,9 +69,17 @@ async function tick() {
 
 async function main() {
   const stopSummary = STOPS.map((s) => `${s.name}${filterLabel(s)}`).join(", ");
-  console.log(`brno-tram-display — ${STOPS.length} stop(s): ${stopSummary}`);
-  console.log(`polling every ${POLL_INTERVAL_MS / 1000}s\n`);
-  console.log("downloading GTFS data (first run may take a few seconds)…\n");
+  console.log(`brno-tram-display starting`);
+  console.log(`  mode      : ${DISPLAY_MODE}`);
+  console.log(`  stops     : ${STOPS.length} — ${stopSummary}`);
+  console.log(`  poll      : every ${POLL_INTERVAL_MS / 1000}s`);
+  console.log(`  window    : ${DEPARTURES_WINDOW_MINUTES} min ahead`);
+  console.log(`  per stop  : ${DEPARTURES_PER_STOP} departures`);
+  console.log(`  gtfs ttl  : ${(GTFS_REFRESH_INTERVAL_MS / 3600000).toFixed(0)}h`);
+  if (DISPLAY_MODE !== "default") console.log(`  port      : ${PORT}`);
+  if (process.env.DEBUG) console.log(`  debug     : on`);
+  console.log();
+  console.log("downloading GTFS data (first run may take a few seconds)…");
 
   if (DISPLAY_MODE !== "default") {
     startWebServer(STOPS, PORT, DEPARTURES_WINDOW_MINUTES);
