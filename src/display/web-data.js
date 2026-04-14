@@ -36,11 +36,23 @@ export async function getAllDepartures(stops, windowMinutes) {
   );
 
   const flat = results.flat().sort((a, b) => a.time - b.time);
-  const filtered = flat.filter((d) => Math.round((d.time - new Date()) / 60000) > 1);
+
+  // deduplicate by tripId — same trip can appear from two stops (e.g. both platforms);
+  // prefer the entry with a logo so retailer icons are preserved
+  const seen = new Map();
+  for (const d of flat) {
+    const existing = seen.get(d.tripId);
+    if (!existing || (!existing.stopLogo && d.stopLogo)) {
+      seen.set(d.tripId, d);
+    }
+  }
+  const deduped = [...seen.values()].sort((a, b) => a.time - b.time);
+
+  const filtered = deduped.filter((d) => Math.round((d.time - new Date()) / 60000) > 1);
   const final = filtered.slice(0, WEB_MAX_DISPLAY_ROWS);
 
   if (DEBUG) {
-    console.debug(`[web-data] merged total=${flat.length} after >1min filter=${filtered.length} after slice=${final.length}`);
+    console.debug(`[web-data] merged total=${flat.length} after dedup=${deduped.length} after >1min filter=${filtered.length} after slice=${final.length}`);
     for (const d of final) {
       console.debug(
         `[web-data]   line=${d.routeShortName} stop=${d.stopName} tripId=${d.tripId ?? "?"} time=${d.time.toISOString()} rt=${d.isRealtime}`
