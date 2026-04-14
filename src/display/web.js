@@ -3,12 +3,13 @@
  *
  * GET /                  → HTML board
  * GET /api/departures    → JSON
- * GET /api/weather       → JSON  { tempCelsius: number|null }
+ * GET /api/rows          → HTML <tr> fragment (HTMX, fingerprinted via X-Rows-Fingerprint)
+ * GET /api/weather       → JSON  { tempCelsius, sunrise, sunset }
  */
 
 import http from "http";
 import { getAllDepartures, getWeather } from "./web-data.js";
-import { renderHtml, renderJson } from "./web-renderer.js";
+import { renderHtml, renderJson, renderRows } from "./web-renderer.js";
 
 // explicit allowlist — never resolve arbitrary filenames from user input
 const STATIC_FILES = new Set(["Albert_logo.svg.png", "Lidl-Logo.svg.png"]);
@@ -30,9 +31,27 @@ async function serveStatic(filename) {
   }
 }
 
-async function handleRequest(stops, windowMinutes, url) {
+function rowsFingerprint(deps) {
+  return deps.map(d => `${d.routeShortName}|${d.stopName}|${d.time.toISOString()}`).join(",");
+}
+
+async function handleRequest(stops, windowMinutes, url, headers) {
   if (url.startsWith("/res/")) {
     return serveStatic(url.slice(5));
+  }
+
+  if (url === "/api/rows") {
+    const deps = await getAllDepartures(stops, windowMinutes);
+    const fp = rowsFingerprint(deps);
+    if ((headers["x-rows-fingerprint"] ?? "") === fp) {
+      return { status: 204, contentType: "text/plain", body: "" };
+    }
+    return { status: 200, contentType: "text/html; charset=utf-8", body: renderRows(deps), extraHeaders: { "X-Rows-Fingerprint": fp } };
+  }
+
+  if (url === "/api/departures") {
+    const deps = await getAllDepartures(stops, windowMinutes);
+    return { status: 200, contentType: "application/json; charset=utf-8", body: renderJson(deps) };
   }
 
   if (url === "/api/weather") {
@@ -44,13 +63,7 @@ async function handleRequest(stops, windowMinutes, url) {
     }) };
   }
 
-  if (url === "/api/departures") {
-    const deps = await getAllDepartures(stops, windowMinutes);
-    return { status: 200, contentType: "application/json; charset=utf-8", body: renderJson(deps) };
-  }
-
   if (url === "/" || url === "/index.html") {
-    // fetch data in parallel — weather failure must not block departures
     const [deps, weather] = await Promise.all([
       getAllDepartures(stops, windowMinutes),
       getWeather(),
@@ -66,7 +79,7 @@ export function startWebServer(stops, port, windowMinutes = 90) {
     const url = (req.url ?? "/").split("?")[0];
     const t0 = Date.now();
     try {
-      const { status, contentType, body, extraHeaders } = await handleRequest(stops, windowMinutes, url);
+      const { status, contentType, body, extraHeaders } = await handleRequest(stops, windowMinutes, url, req.headers);
       res.writeHead(status, { "Content-Type": contentType, ...extraHeaders });
       res.end(body);
       console.log(`[web] ${req.method} ${url} ${status} ${Date.now() - t0}ms`);

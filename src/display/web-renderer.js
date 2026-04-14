@@ -79,7 +79,7 @@ body.sunset .delay{color:#ffb060}
 // Client JS extracted as a named constant
 const CLIENT_JS = `
 (function(){
-  var srISO=window._SR||'',ssISO=window._SS||'';
+  var srISO=window._SR||'',ssISO=window._SS||'',currentFp='';
   function n(v){return '<span class="n">'+v+'</span>';}
   function fmt(diff){
     if(diff<=0) return 'now';
@@ -97,10 +97,6 @@ const CLIENT_JS = `
     document.getElementById('clock').textContent=
       new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Europe/Prague'});
   }
-  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-  function fmtTime(iso){
-    return new Date(iso).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Europe/Prague'});
-  }
   function getMode(){
     if(!srISO||!ssISO) return 'night';
     var now=new Date(),sr=new Date(srISO),ss=new Date(ssISO),H=3600000;
@@ -116,29 +112,6 @@ const CLIENT_JS = `
       b.classList.add(mode);
     }
   }
-  function refresh(){
-    fetch('/api/departures')
-      .then(function(r){return r.json();})
-      .then(function(data){
-        var tbody=document.querySelector('tbody');
-        tbody.querySelectorAll('tr').forEach(function(tr){tr.classList.add('exit');});
-        setTimeout(function(){
-          var rows=data.departures.map(function(d,i){
-            var logo=d.stopLogo?'<img src="/res/'+esc(d.stopLogo)+'" alt="" style="height:0.8em;vertical-align:middle;margin-left:0.35em;opacity:0.85">':'';
-            var delay=d.delayMinutes>0?'<span class="delay">+'+d.delayMinutes+'m</span>':'';
-            return '<tr class="enter" style="animation-delay:'+(i*60)+'ms">'
-              +'<td class="line">'+esc(d.line)+'</td>'
-              +'<td class="stop">'+esc(d.stop)+logo+'</td>'
-              +'<td class="mins" data-time="'+esc(d.time)+'">—</td>'
-              +'<td class="time">'+fmtTime(d.time)+delay+'</td>'
-              +'</tr>';
-          }).join('');
-          tbody.innerHTML=rows;
-          tickCountdowns();
-        },220);
-      })
-      .catch(function(){});
-  }
   function refreshWeather(){
     fetch('/api/weather')
       .then(function(r){return r.json();})
@@ -151,11 +124,23 @@ const CLIENT_JS = `
       })
       .catch(function(){});
   }
+  document.body.addEventListener('htmx:configRequest',function(evt){
+    evt.detail.headers['X-Rows-Fingerprint']=currentFp;
+  });
+  document.body.addEventListener('htmx:beforeSwap',function(evt){
+    if(!evt.detail.serverResponse) return;
+    var fp=evt.detail.xhr&&evt.detail.xhr.getResponseHeader('X-Rows-Fingerprint');
+    if(fp) currentFp=fp;
+    evt.detail.shouldSwap=false;
+    var tbody=evt.detail.target;
+    tbody.querySelectorAll('tr').forEach(function(tr){tr.classList.add('exit');});
+    var html=evt.detail.serverResponse;
+    setTimeout(function(){tbody.innerHTML=html;tickCountdowns();},220);
+  });
   requestAnimationFrame(function(){requestAnimationFrame(function(){document.body.classList.remove('no-transition');});});
   tickCountdowns();
   tickClock();
   setInterval(tickClock,1000);
-  setInterval(refresh,30000);
   setInterval(refreshWeather,600000);
   setInterval(applyMode,60000);
 })();
@@ -174,15 +159,34 @@ function computeMode(sunrise, sunset) {
   return "night";
 }
 
+function buildRow(d) {
+  const iso = d.time.toISOString();
+  const delayMins = d.isRealtime ? Math.round(d.delaySeconds / 60) : 0;
+  const delayBadge = delayMins > 0 ? `<span class="delay">+${delayMins}m</span>` : "";
+  const logoHtml = d.stopLogo
+    ? `<img src="/res/${htmlEscape(d.stopLogo)}" alt="" style="height:0.8em;vertical-align:middle;margin-left:0.35em;opacity:0.85">`
+    : "";
+  return { iso, delayBadge, logoHtml };
+}
+
+/** Initial page render — no animation classes. */
 function buildRows(departures) {
   return departures.map((d) => {
-    const iso = d.time.toISOString();
-    const delayMins = d.isRealtime ? Math.round(d.delaySeconds / 60) : 0;
-    const delayBadge = delayMins > 0 ? `<span class="delay">+${delayMins}m</span>` : "";
-    const logoHtml = d.stopLogo
-      ? `<img src="/res/${htmlEscape(d.stopLogo)}" alt="" style="height:0.8em;vertical-align:middle;margin-left:0.35em;opacity:0.85">`
-      : "";
+    const { iso, delayBadge, logoHtml } = buildRow(d);
     return `<tr>
+  <td class="line">${htmlEscape(d.routeShortName)}</td>
+  <td class="stop">${htmlEscape(d.stopName)}${logoHtml}</td>
+  <td class="mins" data-time="${iso}">—</td>
+  <td class="time">${formatTime(d.time)}${delayBadge}</td>
+</tr>`;
+  }).join("");
+}
+
+/** HTMX fragment — rows include enter animation classes and stagger delays. */
+export function renderRows(departures) {
+  return departures.map((d, i) => {
+    const { iso, delayBadge, logoHtml } = buildRow(d);
+    return `<tr class="enter" style="animation-delay:${i * 60}ms">
   <td class="line">${htmlEscape(d.routeShortName)}</td>
   <td class="stop">${htmlEscape(d.stopName)}${logoHtml}</td>
   <td class="mins" data-time="${iso}">—</td>
@@ -209,6 +213,7 @@ export function renderHtml(departures, weather) {
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>Trams</title>
 <style>${CSS}</style>
+<script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
 </head>
 <body class="no-transition ${mode}">
 <script>window._SR=${JSON.stringify(sunrise)};window._SS=${JSON.stringify(sunset)};</script>
@@ -216,7 +221,7 @@ export function renderHtml(departures, weather) {
   <div id="clock">—</div>
   <div id="temp">${tempHtml}</div>
 </div>
-<table><tbody>${buildRows(departures)}</tbody></table>
+<table><tbody hx-get="/api/rows" hx-trigger="every 30s" hx-swap="innerHTML">${buildRows(departures)}</tbody></table>
 <script>${CLIENT_JS}</script>
 </body>
 </html>`;
