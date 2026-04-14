@@ -22,6 +22,7 @@ import {
 let cache = null;
 let lastFetchTime = 0;
 let refreshIntervalMs = ONE_DAY_MS;
+let fetchInFlight = null;
 
 const CALENDAR_DAY_COLUMNS = [
   "sunday",
@@ -144,13 +145,7 @@ function buildLookups(stops, routes, trips, stopTimes, calendar) {
   return { stopsMap, stopTimesByStop };
 }
 
-async function ensureCache() {
-  const now = Date.now();
-  if (cache && now - lastFetchTime < refreshIntervalMs) {
-    if (DEBUG) console.debug(`[gtfs] cache hit (age ${Math.round((now - lastFetchTime) / 60000)}min)`);
-    return cache;
-  }
-
+async function downloadAndBuildCache() {
   console.log(`[gtfs] downloading from ${GTFS_URL} …`);
   const t0 = Date.now();
   const res = await fetch(GTFS_URL);
@@ -174,10 +169,24 @@ async function ensureCache() {
   }
 
   cache = buildLookups(stops, routes, trips, stopTimes, calendar);
-  lastFetchTime = now;
+  lastFetchTime = Date.now();
   const nextRefreshMin = Math.round(refreshIntervalMs / 60000);
   console.log(`[gtfs] next refresh in ${nextRefreshMin >= 60 ? (nextRefreshMin / 60).toFixed(0) + "h" : nextRefreshMin + "min"}`);
   return cache;
+}
+
+async function ensureCache() {
+  const now = Date.now();
+  if (cache && now - lastFetchTime < refreshIntervalMs) {
+    if (DEBUG) console.debug(`[gtfs] cache hit (age ${Math.round((now - lastFetchTime) / 60000)}min)`);
+    return cache;
+  }
+  if (fetchInFlight) return fetchInFlight;
+
+  fetchInFlight = downloadAndBuildCache().finally(() => {
+    fetchInFlight = null;
+  });
+  return fetchInFlight;
 }
 
 const DEBUG = !!process.env.DEBUG;
