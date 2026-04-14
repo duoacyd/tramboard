@@ -120,7 +120,12 @@ td.time{color:#fff;text-align:right;white-space:nowrap;width:160px}
       now.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Europe/Prague'});
   }
   tick();
-  setInterval(tick,15000);
+  // only the clock needs a live interval — countdowns and data refresh with the page every 30s
+  setInterval(function(){
+    var now=new Date();
+    document.getElementById('clock').textContent=
+      now.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Europe/Prague'});
+  },1000);
 })();
 </script>
 </body>
