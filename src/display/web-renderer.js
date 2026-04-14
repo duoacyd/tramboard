@@ -22,7 +22,7 @@ function formatTime(date) {
   });
 }
 
-const TRANSITION = "900s ease-in-out";
+const TRANSITION = "1800s ease-in-out";
 
 // CSS extracted as a named constant so it can be read/edited independently
 const CSS = `
