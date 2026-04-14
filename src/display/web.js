@@ -74,23 +74,23 @@ body{
   background:#0d0d0d;
   color:#c8c8c8;
   font-family:monospace;
-  font-size:22px;
-  padding:24px;
+  font-size:58px;
+  padding:32px;
 }
 table{
   width:100%;
   border-collapse:collapse;
 }
 td{
-  padding:14px 0;
+  padding:26px 0;
   border-bottom:1px solid #1a1a1a;
   vertical-align:middle;
 }
-td:nth-child(1){color:#aaa;font-size:20px;padding-right:20px;white-space:nowrap}
-td:nth-child(2){font-weight:700;color:#fff;padding-right:16px;width:52px}
-td:nth-child(3){color:#fff;white-space:nowrap;width:60px}
-td:nth-child(4){color:#555;font-size:16px;text-align:right;white-space:nowrap;width:80px}
-.delay{color:#e87c2a;font-size:14px;margin-left:6px}
+td:nth-child(1){color:#aaa;font-size:50px;padding-right:28px;white-space:nowrap}
+td:nth-child(2){font-weight:700;color:#fff;padding-right:24px;width:80px}
+td:nth-child(3){color:#fff;white-space:nowrap;width:120px}
+td:nth-child(4){color:#555;font-size:38px;text-align:right;white-space:nowrap;width:120px}
+.delay{color:#e87c2a;font-size:34px;margin-left:10px}
 </style>
 </head>
 <body>
