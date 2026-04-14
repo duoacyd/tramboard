@@ -36,11 +36,11 @@ if [ ! -z "$CONTAINER_RUNNING" ]; then
 fi
 echo ""
 
-# Git pull
+# Git fetch
 echo "Fetching latest code..."
 cd "$APP_DIR" || { echo "ERROR: $APP_DIR not found"; exit 1; }
-sudo git fetch
-GIT_STATUS=$(sudo git status -uno)
+git fetch
+GIT_STATUS=$(git status -uno)
 echo "$GIT_STATUS"
 echo ""
 
@@ -81,7 +81,7 @@ fi
 
 # Step 1: Git pull
 echo "Step 1: Pulling latest code..."
-sudo git pull
+git pull
 echo ""
 
 # Step 2: Stop container
