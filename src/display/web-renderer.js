@@ -146,6 +146,7 @@ const CLIENT_JS = `
         var key=newTr.dataset.key;
         if(key&&oldMap[key]){
           var oldTr=oldMap[key];
+          oldTr.classList.remove('enter','exit');
           var om=oldTr.querySelector('.mins'),nm=newTr.querySelector('.mins');
           if(om&&nm)om.dataset.time=nm.dataset.time;
           var ot=oldTr.querySelector('.time'),nt=newTr.querySelector('.time');
