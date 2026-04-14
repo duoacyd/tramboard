@@ -70,9 +70,43 @@ const CLIENT_JS = `
     document.getElementById('clock').textContent=
       new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Europe/Prague'});
   }
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function fmtTime(iso){
+    return new Date(iso).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Europe/Prague'});
+  }
+  function refresh(){
+    fetch('/api/departures')
+      .then(function(r){return r.json();})
+      .then(function(data){
+        var rows=data.departures.map(function(d){
+          var logo=d.stopLogo?'<img src="/res/'+esc(d.stopLogo)+'" alt="" style="height:0.8em;vertical-align:middle;margin-left:0.35em;opacity:0.85">':'';
+          var delay=d.delayMinutes>0?'<span class="delay">+'+d.delayMinutes+'m</span>':'';
+          return '<tr>'
+            +'<td class="line">'+esc(d.line)+'</td>'
+            +'<td class="stop">'+esc(d.stop)+logo+'</td>'
+            +'<td class="mins" data-time="'+esc(d.time)+'">—</td>'
+            +'<td class="time">'+fmtTime(d.time)+delay+'</td>'
+            +'</tr>';
+        }).join('');
+        document.querySelector('tbody').innerHTML=rows;
+        tickCountdowns();
+      })
+      .catch(function(){});
+  }
+  function refreshWeather(){
+    fetch('/api/weather')
+      .then(function(r){return r.json();})
+      .then(function(data){
+        var el=document.getElementById('temp');
+        if(el) el.textContent=data.tempCelsius!=null?data.tempCelsius+'°C':'';
+      })
+      .catch(function(){});
+  }
   tickCountdowns();
   tickClock();
   setInterval(tickClock,1000);
+  setInterval(refresh,30000);
+  setInterval(refreshWeather,600000);
 })();
 `;
 
@@ -107,7 +141,6 @@ export function renderHtml(departures, tempCelsius) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<meta http-equiv="refresh" content="30">
 <title>Trams</title>
 <style>${CSS}</style>
 </head>
@@ -133,6 +166,7 @@ export function renderJson(departures) {
       minutesFromNow: Math.round((d.time - new Date()) / 60000),
       isRealtime: d.isRealtime,
       delayMinutes: Math.round(d.delaySeconds / 60),
+      stopLogo: d.stopLogo ?? null,
     })),
   });
 }

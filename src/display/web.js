@@ -3,6 +3,7 @@
  *
  * GET /                  → HTML board
  * GET /api/departures    → JSON
+ * GET /api/weather       → JSON  { tempCelsius: number|null }
  */
 
 import http from "http";
@@ -32,6 +33,11 @@ async function serveStatic(filename) {
 async function handleRequest(stops, windowMinutes, url) {
   if (url.startsWith("/res/")) {
     return serveStatic(url.slice(5));
+  }
+
+  if (url === "/api/weather") {
+    const temp = await getWeather();
+    return { status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify({ tempCelsius: temp }) };
   }
 
   if (url === "/api/departures") {
