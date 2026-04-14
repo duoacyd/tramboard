@@ -41,7 +41,7 @@ body{
 #clock{font-size:56px;font-weight:700;color:#fff;letter-spacing:0.04em}
 #temp{font-size:48px;color:#7ecfff}
 table{width:100%;border-collapse:collapse}
-td{padding:26px 0;border-bottom:1px solid #1a1a1a;vertical-align:middle}
+td{padding:18px 0;border-bottom:1px solid #1a1a1a;vertical-align:middle}
 td.line{font-weight:700;color:#fff;padding-right:28px;white-space:nowrap;width:80px}
 td.stop{color:#aaa;font-size:50px;padding-right:28px;white-space:nowrap}
 td.mins{color:#e87c2a;font-size:38px;white-space:nowrap;width:160px}

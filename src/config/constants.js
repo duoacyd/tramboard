@@ -22,7 +22,7 @@ export const LINE_ID_PREFIX = "L";
 
 export const TIMEZONE = "Europe/Prague";
 export const DEFAULT_WINDOW_MINUTES = 90;
-export const WEB_MAX_DISPLAY_ROWS = 5;
+export const WEB_MAX_DISPLAY_ROWS = 6;
 
 export const OPENMETEO_URL =
   "https://api.open-meteo.com/v1/forecast" +
