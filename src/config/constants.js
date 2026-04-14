@@ -27,5 +27,5 @@ export const WEB_MAX_DISPLAY_ROWS = 6;
 export const OPENMETEO_URL =
   "https://api.open-meteo.com/v1/forecast" +
   "?latitude=49.1951&longitude=16.6068" +
-  "&current=temperature_2m&timezone=Europe%2FPrague";
+  "&current=temperature_2m&daily=sunrise,sunset&forecast_days=1&timezone=Europe%2FPrague";
 export const CACHE_TTL_WEATHER_MS = 10 * 60 * 1000; // 10 min

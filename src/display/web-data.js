@@ -3,7 +3,7 @@
  */
 
 import { fetchDepartures } from "../adapters/kordis.js";
-import { getCurrentTemperatureBrno } from "../adapters/openmeteo.js";
+import { getWeatherBrno } from "../adapters/openmeteo.js";
 import { applyFilters } from "./terminal.js";
 import { WEB_MAX_DISPLAY_ROWS } from "../config/constants.js";
 const DEBUG = !!process.env.DEBUG;
@@ -64,5 +64,5 @@ export async function getAllDepartures(stops, windowMinutes) {
 }
 
 export async function getWeather() {
-  return getCurrentTemperatureBrno();
+  return getWeatherBrno();
 }

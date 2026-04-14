@@ -36,8 +36,12 @@ async function handleRequest(stops, windowMinutes, url) {
   }
 
   if (url === "/api/weather") {
-    const temp = await getWeather();
-    return { status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify({ tempCelsius: temp }) };
+    const w = await getWeather();
+    return { status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify({
+      tempCelsius: w?.temp ?? null,
+      sunrise: w?.sunrise ?? null,
+      sunset:  w?.sunset  ?? null,
+    }) };
   }
 
   if (url === "/api/departures") {
@@ -47,11 +51,11 @@ async function handleRequest(stops, windowMinutes, url) {
 
   if (url === "/" || url === "/index.html") {
     // fetch data in parallel — weather failure must not block departures
-    const [deps, temp] = await Promise.all([
+    const [deps, weather] = await Promise.all([
       getAllDepartures(stops, windowMinutes),
       getWeather(),
     ]);
-    return { status: 200, contentType: "text/html; charset=utf-8", body: renderHtml(deps, temp) };
+    return { status: 200, contentType: "text/html; charset=utf-8", body: renderHtml(deps, weather) };
   }
 
   return { status: 404, contentType: "text/plain", body: "Not found" };

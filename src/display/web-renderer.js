@@ -22,37 +22,60 @@ function formatTime(date) {
   });
 }
 
+const TRANSITION = "900s ease-in-out";
+
 // CSS extracted as a named constant so it can be read/edited independently
 const CSS = `
 *{margin:0;padding:0;box-sizing:border-box}
-body{
-  background:#0d0d0d;
-  color:#c8c8c8;
-  font-family:monospace;
-  font-size:58px;
-  padding:32px;
-}
-#topbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:baseline;
-  margin-bottom:24px;
-}
-#clock{font-size:56px;font-weight:700;color:#fff;letter-spacing:0.04em}
-#temp{font-size:48px;color:#7ecfff}
+body{background:#0d0d0d;color:#c8c8c8;font-family:monospace;font-size:58px;padding:32px;transition:background-color ${TRANSITION},color ${TRANSITION}}
+body.no-transition,body.no-transition *{transition:none!important}
+#topbar{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px}
+#clock{font-size:56px;font-weight:700;color:#fff;letter-spacing:0.04em;transition:color ${TRANSITION}}
+#temp{font-size:48px;color:#7ecfff;transition:color ${TRANSITION}}
 table{width:100%;border-collapse:collapse}
-td{padding:24px 0;border-bottom:1px solid #1a1a1a;vertical-align:middle}
-td.line{font-weight:700;color:#fff;padding-right:28px;white-space:nowrap;width:80px}
-td.stop{color:#aaa;font-size:50px;padding-right:28px;white-space:nowrap}
-td.mins{color:#e87c2a;font-size:38px;white-space:nowrap;width:160px}
-td.mins .n{font-size:54px;font-weight:700;color:#f5c87a}
-td.time{color:#fff;text-align:right;white-space:nowrap;width:160px}
-.delay{color:#e87c2a;font-size:34px;margin-left:10px}
+td{padding:24px 0;border-bottom:1px solid #1a1a1a;vertical-align:middle;transition:border-bottom-color ${TRANSITION}}
+td.line{font-weight:700;color:#fff;padding-right:28px;white-space:nowrap;width:80px;transition:color ${TRANSITION}}
+td.stop{color:#aaa;font-size:50px;padding-right:28px;white-space:nowrap;transition:color ${TRANSITION}}
+td.mins{color:#e87c2a;font-size:38px;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
+td.mins .n{font-size:54px;font-weight:700;color:#f5c87a;transition:color ${TRANSITION}}
+td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
+.delay{color:#e87c2a;font-size:34px;margin-left:10px;transition:color ${TRANSITION}}
+body.day{background-color:#f0ede8;color:#2a2a2a}
+body.day #clock{color:#111}
+body.day #temp{color:#0070a0}
+body.day td{border-bottom-color:#d8d4d0}
+body.day td.line{color:#111}
+body.day td.stop{color:#555}
+body.day td.mins{color:#c05000}
+body.day td.mins .n{color:#b06000}
+body.day td.time{color:#111}
+body.day .delay{color:#c05000}
+body.sunrise{background-color:#fde8c8;color:#3d1a00}
+body.sunrise #clock{color:#2d0e00}
+body.sunrise #temp{color:#6060a0}
+body.sunrise td{border-bottom-color:#e8c090}
+body.sunrise td.line{color:#2d0e00}
+body.sunrise td.stop{color:#8b4820}
+body.sunrise td.mins{color:#d4800a}
+body.sunrise td.mins .n{color:#c06800}
+body.sunrise td.time{color:#2d0e00}
+body.sunrise .delay{color:#d4800a}
+body.sunset{background-color:#c04820;color:#ffe8d0}
+body.sunset #clock{color:#fff}
+body.sunset #temp{color:#ffe0b0}
+body.sunset td{border-bottom-color:#a03018}
+body.sunset td.line{color:#fff}
+body.sunset td.stop{color:#ffccaa}
+body.sunset td.mins{color:#ffb060}
+body.sunset td.mins .n{color:#ffd080}
+body.sunset td.time{color:#fff}
+body.sunset .delay{color:#ffb060}
 `;
 
 // Client JS extracted as a named constant
 const CLIENT_JS = `
 (function(){
+  var srISO=window._SR||'',ssISO=window._SS||'';
   function n(v){return '<span class="n">'+v+'</span>';}
   function fmt(diff){
     if(diff<=0) return 'now';
@@ -73,6 +96,21 @@ const CLIENT_JS = `
   function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
   function fmtTime(iso){
     return new Date(iso).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Europe/Prague'});
+  }
+  function getMode(){
+    if(!srISO||!ssISO) return 'night';
+    var now=new Date(),sr=new Date(srISO),ss=new Date(ssISO),H=3600000;
+    if(now>=new Date(sr-H)&&now<new Date(sr+H)) return 'sunrise';
+    if(now>=new Date(sr+H)&&now<new Date(ss-H)) return 'day';
+    if(now>=new Date(ss-H)&&now<new Date(ss+H)) return 'sunset';
+    return 'night';
+  }
+  function applyMode(){
+    var mode=getMode(),b=document.body;
+    if(!b.classList.contains(mode)){
+      b.classList.remove('night','day','sunrise','sunset');
+      b.classList.add(mode);
+    }
   }
   function refresh(){
     fetch('/api/departures')
@@ -98,17 +136,35 @@ const CLIENT_JS = `
       .then(function(r){return r.json();})
       .then(function(data){
         var el=document.getElementById('temp');
-        if(el) el.textContent=data.tempCelsius!=null?data.tempCelsius+'°C':'';
+        if(el&&data.tempCelsius!=null) el.textContent=data.tempCelsius+'°C';
+        if(data.sunrise) srISO=data.sunrise;
+        if(data.sunset)  ssISO=data.sunset;
+        applyMode();
       })
       .catch(function(){});
   }
+  requestAnimationFrame(function(){requestAnimationFrame(function(){document.body.classList.remove('no-transition');});});
   tickCountdowns();
   tickClock();
   setInterval(tickClock,1000);
   setInterval(refresh,30000);
   setInterval(refreshWeather,600000);
+  setInterval(applyMode,60000);
 })();
 `;
+
+/** Returns the display mode for a given time based on sunrise/sunset ISO strings. */
+function computeMode(sunrise, sunset) {
+  if (!sunrise || !sunset) return "night";
+  const now = new Date();
+  const sr = new Date(sunrise);
+  const ss = new Date(sunset);
+  const H = 3600000;
+  if (now >= new Date(sr - H) && now < new Date(sr + H)) return "sunrise";
+  if (now >= new Date(sr + H) && now < new Date(ss - H)) return "day";
+  if (now >= new Date(ss - H) && now < new Date(ss + H)) return "sunset";
+  return "night";
+}
 
 function buildRows(departures) {
   return departures.map((d) => {
@@ -129,12 +185,14 @@ function buildRows(departures) {
 
 /**
  * @param {Array} departures
- * @param {number|null} tempCelsius  — null renders as empty (graceful degradation)
+ * @param {{ temp: number|null, sunrise: string|null, sunset: string|null }|null} weather
  */
-export function renderHtml(departures, tempCelsius) {
-  const tempHtml = tempCelsius != null
-    ? `${tempCelsius}°C`
-    : "";
+export function renderHtml(departures, weather) {
+  const temp     = weather?.temp     ?? null;
+  const sunrise  = weather?.sunrise  ?? null;
+  const sunset   = weather?.sunset   ?? null;
+  const tempHtml = temp != null ? `${temp}°C` : "";
+  const mode     = computeMode(sunrise, sunset);
 
   return `<!DOCTYPE html>
 <html lang="cs">
@@ -144,7 +202,8 @@ export function renderHtml(departures, tempCelsius) {
 <title>Trams</title>
 <style>${CSS}</style>
 </head>
-<body>
+<body class="no-transition ${mode}">
+<script>window._SR=${JSON.stringify(sunrise)};window._SS=${JSON.stringify(sunset)};</script>
 <div id="topbar">
   <div id="clock">—</div>
   <div id="temp">${tempHtml}</div>
