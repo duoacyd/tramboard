@@ -38,6 +38,7 @@ td.line{font-weight:700;color:#fff;padding-right:28px;white-space:nowrap;width:8
 td.stop{color:#aaa;font-size:50px;padding-right:28px;white-space:nowrap;transition:color ${TRANSITION}}
 td.mins{color:#e87c2a;font-size:38px;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
 td.mins .n{font-size:54px;font-weight:700;color:#f5c87a;transition:color ${TRANSITION}}
+td.mins.urgent{color:#ff5050}td.mins.urgent .n{color:#ff5050}
 td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
 .delay{color:#e87c2a;font-size:34px;margin-left:10px;transition:color ${TRANSITION}}
 @keyframes rowExit{from{transform:translateY(0);opacity:1}to{transform:translateY(-32px);opacity:0}}
@@ -89,8 +90,14 @@ const CLIENT_JS = `
   }
   function tickCountdowns(){
     document.querySelectorAll('.mins[data-time]').forEach(function(el){
-      var diff=Math.round((new Date(el.dataset.time)-new Date())/60000);
-      el.innerHTML=fmt(diff);
+      var diffMs=new Date(el.dataset.time)-new Date();
+      var diffSec=Math.round(diffMs/1000);
+      var diffMin=Math.round(diffMs/60000);
+      var tr=el.closest('tr');
+      var min=tr?parseInt(tr.dataset.min||'1',10):1;
+      if(diffMin<min){if(tr)tr.remove();return;}
+      el.classList.toggle('urgent',diffMin===min&&diffSec%60<30);
+      el.innerHTML=fmt(diffMin);
     });
   }
   function tickClock(){
@@ -165,7 +172,7 @@ const CLIENT_JS = `
   tickCountdowns();
   tickClock();
   setInterval(tickClock,1000);
-  setInterval(tickCountdowns,10000);
+  setInterval(tickCountdowns,5000);
   setInterval(refreshWeather,600000);
   setInterval(applyMode,60000);
 })();
@@ -199,7 +206,7 @@ function buildRow(d) {
 function buildRows(departures) {
   return departures.map((d) => {
     const { iso, key, delayBadge, logoHtml } = buildRow(d);
-    return `<tr data-key="${key}">
+    return `<tr data-key="${key}" data-min="${d.minMinutes ?? 1}">
   <td class="line">${htmlEscape(d.routeShortName)}</td>
   <td class="stop">${htmlEscape(d.stopName)}${logoHtml}</td>
   <td class="mins" data-time="${iso}">—</td>
@@ -212,7 +219,7 @@ function buildRows(departures) {
 export function renderRows(departures) {
   return departures.map((d) => {
     const { iso, key, delayBadge, logoHtml } = buildRow(d);
-    return `<tr class="enter" data-key="${key}">
+    return `<tr class="enter" data-key="${key}" data-min="${d.minMinutes ?? 1}">
   <td class="line">${htmlEscape(d.routeShortName)}</td>
   <td class="stop">${htmlEscape(d.stopName)}${logoHtml}</td>
   <td class="mins" data-time="${iso}">—</td>
