@@ -30,7 +30,7 @@ function formatDelay(delaySeconds, isRealtime) {
   return `${GREEN}${Math.abs(mins)} min early${RESET}`;
 }
 
-export function applyFilters(departures, { direction, lines, excludeLines }) {
+export function applyFilters(departures, { direction, lines }) {
   let result = departures;
   if (direction) {
     const needle = normalizeForSearch(direction);
@@ -39,10 +39,6 @@ export function applyFilters(departures, { direction, lines, excludeLines }) {
   if (lines?.length > 0) {
     const allowed = new Set(lines.map(String));
     result = result.filter((dep) => allowed.has(String(dep.routeShortName)));
-  }
-  if (excludeLines?.length > 0) {
-    const blocked = new Set(excludeLines.map(String));
-    result = result.filter((dep) => !blocked.has(String(dep.routeShortName)));
   }
   return result;
 }
