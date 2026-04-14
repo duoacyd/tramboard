@@ -81,9 +81,12 @@ function buildRows(departures) {
     const iso = d.time.toISOString();
     const delayMins = d.isRealtime ? Math.round(d.delaySeconds / 60) : 0;
     const delayBadge = delayMins > 0 ? `<span class="delay">+${delayMins}m</span>` : "";
+    const logoHtml = d.stopLogo
+      ? `<img src="/res/${htmlEscape(d.stopLogo)}" alt="" style="height:0.8em;vertical-align:middle;margin-left:0.35em;opacity:0.85">`
+      : "";
     return `<tr>
   <td class="line">${htmlEscape(d.routeShortName)}</td>
-  <td class="stop">${htmlEscape(d.stopName)}</td>
+  <td class="stop">${htmlEscape(d.stopName)}${logoHtml}</td>
   <td class="mins" data-time="${iso}">—</td>
   <td class="time">${formatTime(d.time)}${delayBadge}</td>
 </tr>`;
