@@ -16,6 +16,8 @@ function toLineKey(routeShortName) {
   return String(routeShortName ?? "").replace(/^L/i, "") || routeShortName;
 }
 
+const DEBUG = !!process.env.DEBUG;
+
 function mergeWithRealtime(trips, delaysByLine) {
   return trips.map((t) => {
     const delayMinutes = delaysByLine.get(toLineKey(t.routeShortName));
@@ -23,8 +25,15 @@ function mergeWithRealtime(trips, delaysByLine) {
     const time = new Date(t.scheduledDeparture);
     if (hasRealtime) time.setMinutes(time.getMinutes() + delayMinutes);
 
+    if (DEBUG) {
+      console.debug(
+        `[kordis] merge tripId=${t.tripId} line=${t.routeShortName} scheduled=${t.scheduledDeparture.toISOString()} delay=${hasRealtime ? delayMinutes + "min" : "none"} -> ${time.toISOString()}`
+      );
+    }
+
     return {
       time,
+      tripId: t.tripId,
       isRealtime: hasRealtime,
       delaySeconds: hasRealtime ? delayMinutes * 60 : 0,
       routeShortName: t.routeShortName ?? "",

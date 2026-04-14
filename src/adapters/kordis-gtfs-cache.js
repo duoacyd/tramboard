@@ -165,6 +165,8 @@ async function ensureCache() {
   return cache;
 }
 
+const DEBUG = !!process.env.DEBUG;
+
 export async function getUpcomingTripsForStop(stopId, windowMinutes) {
   const { stopTimesByStop } = await ensureCache();
   const trips = stopTimesByStop.get(stopId);
@@ -178,16 +180,40 @@ export async function getUpcomingTripsForStop(stopId, windowMinutes) {
   const result = [];
   for (const t of trips) {
     let depMinutes = gtfsTimeToMinutesSinceMidnight(t.departureTime);
-    if (depMinutes < nowMinutes - 60) depMinutes += dayMinutes;
+    const wrapped = depMinutes < nowMinutes - 60;
+    if (wrapped) depMinutes += dayMinutes;
     if (depMinutes < nowMinutes || depMinutes > windowEnd) continue;
 
-    result.push({
+    const dep = {
       tripId: t.tripId,
       scheduledDeparture: dateFromMinutesSinceMidnight(pragueNow, depMinutes),
       routeShortName: t.routeShortName,
       headsign: t.headsign,
-    });
+    };
+
+    if (DEBUG) {
+      console.debug(
+        `[gtfs] stop=${stopId} line=${t.routeShortName} tripId=${t.tripId} rawTime=${t.departureTime} depMinutes=${depMinutes} wrapped=${wrapped} scheduledDeparture=${dep.scheduledDeparture.toISOString()}`
+      );
+    }
+
+    result.push(dep);
   }
+
+  if (DEBUG) {
+    console.debug(`[gtfs] stop=${stopId}: ${result.length} trips in window`);
+    // detect duplicates: same line + same scheduled minute
+    const seen = new Map();
+    for (const r of result) {
+      const key = `${r.routeShortName}|${r.scheduledDeparture.toISOString()}`;
+      if (seen.has(key)) {
+        console.warn(`[gtfs] DUPLICATE at stop=${stopId}: line=${r.routeShortName} time=${r.scheduledDeparture.toISOString()} tripIds=${seen.get(key)} vs ${r.tripId}`);
+      } else {
+        seen.set(key, r.tripId);
+      }
+    }
+  }
+
   return result;
 }
 
