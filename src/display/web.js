@@ -30,13 +30,16 @@ async function handleRequest(stops, windowMinutes, url) {
 export function startWebServer(stops, port, windowMinutes = 90) {
   const server = http.createServer(async (req, res) => {
     const url = (req.url ?? "/").split("?")[0];
+    const t0 = Date.now();
     try {
       const { status, contentType, body } = await handleRequest(stops, windowMinutes, url);
       res.writeHead(status, { "Content-Type": contentType });
       res.end(body);
+      console.log(`[web] ${req.method} ${url} ${status} ${Date.now() - t0}ms`);
     } catch (err) {
       res.writeHead(500, { "Content-Type": "text/plain" });
       res.end("internal error");
+      console.error(`[web] ${req.method} ${url} 500 ${Date.now() - t0}ms —`, err.message);
     }
   });
 
