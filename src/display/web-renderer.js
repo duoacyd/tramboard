@@ -38,7 +38,7 @@ td.line{font-weight:700;color:#fff;padding-right:28px;white-space:nowrap;width:8
 td.stop{color:#aaa;font-size:50px;padding-right:28px;white-space:nowrap;transition:color ${TRANSITION}}
 td.mins{color:#e87c2a;font-size:38px;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
 td.mins .n{font-size:54px;font-weight:700;color:#f5c87a;transition:color ${TRANSITION}}
-td.mins.urgent{color:#ff5050}td.mins.urgent .n{color:#ff5050}
+td.mins.urgent{color:#ff5050;text-shadow:0 0 12px #ff505099}td.mins.urgent .n{color:#ff5050}
 td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
 .delay{color:#ff4444;font-size:34px;margin-left:10px;transition:color ${TRANSITION}}
 @keyframes rowExit{from{transform:translateY(0);opacity:1}to{transform:translateY(-32px);opacity:0}}
@@ -172,7 +172,7 @@ const CLIENT_JS = `
   tickCountdowns();
   tickClock();
   setInterval(tickClock,1000);
-  setInterval(tickCountdowns,5000);
+  setInterval(tickCountdowns,3000);
   setInterval(refreshWeather,600000);
   setInterval(applyMode,60000);
 })();
