@@ -23,7 +23,7 @@ async function serveStatic(filename) {
   const filePath = resolve(join(__dirname, "../../res", filename));
   try {
     const data = await readFile(filePath);
-    return { status: 200, contentType: "image/png", body: data };
+    return { status: 200, contentType: "image/png", body: data, extraHeaders: { "Cache-Control": "public, max-age=604800, immutable" } };
   } catch {
     return { status: 404, contentType: "text/plain", body: "Not found" };
   }
@@ -56,8 +56,8 @@ export function startWebServer(stops, port, windowMinutes = 90) {
     const url = (req.url ?? "/").split("?")[0];
     const t0 = Date.now();
     try {
-      const { status, contentType, body } = await handleRequest(stops, windowMinutes, url);
-      res.writeHead(status, { "Content-Type": contentType });
+      const { status, contentType, body, extraHeaders } = await handleRequest(stops, windowMinutes, url);
+      res.writeHead(status, { "Content-Type": contentType, ...extraHeaders });
       res.end(body);
       console.log(`[web] ${req.method} ${url} ${status} ${Date.now() - t0}ms`);
     } catch (err) {
