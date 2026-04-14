@@ -12,6 +12,6 @@ export const STOPS = [
   { stopId: "U1782Z2", name: "Zdráhalova",  direction: "" },
   { stopId: "U1782Z1", name: "Zdráhalova",  direction: "", lines: ["5"], logo: "Albert_logo.svg.png" },
   { stopId: "U1667Z2", name: "Tomanova",    direction: "" },
-  { stopId: "U1667Z1", name: "Tomanova",    direction: "", lines: ["9"], logo: "Lidl-Logo.svg.png" },
+  { stopId: "U1667Z1", name: "Tomanova",    direction: "", lines: ["9", "7"], logo: "Lidl-Logo.svg.png" },
   { stopId: "U1211Z8", name: "Jugoslávská", direction: "", lines: ["3"] },
 ];
