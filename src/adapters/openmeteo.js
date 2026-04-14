@@ -6,6 +6,8 @@
 import fetch from "node-fetch";
 import { ONE_HOUR_MS } from "../config/constants.js";
 
+const DEBUG = !!process.env.DEBUG;
+
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
 const URL =
   "https://api.open-meteo.com/v1/forecast" +
@@ -17,7 +19,10 @@ let cacheTime = 0;
 
 export async function getCurrentTemperatureBrno() {
   const now = Date.now();
-  if (cached !== null && now - cacheTime < CACHE_TTL_MS) return cached;
+  if (cached !== null && now - cacheTime < CACHE_TTL_MS) {
+    if (DEBUG) console.debug(`[openmeteo] cache hit: ${cached}°C (${Math.round((CACHE_TTL_MS - (now - cacheTime)) / 60000)}min remaining)`);
+    return cached;
+  }
 
   try {
     const res = await fetch(URL);
@@ -27,10 +32,14 @@ export async function getCurrentTemperatureBrno() {
     if (temp == null || Number.isNaN(Number(temp))) throw new Error("unexpected open-meteo response shape");
     cached = Math.round(temp);
     cacheTime = now;
+    console.log(`[openmeteo] ${cached}°C`);
     return cached;
   } catch (err) {
-    // return stale if available, null if no prior data
-    console.warn("open-meteo fetch failed:", err.message);
-    return cached ?? null;
+    console.warn("[openmeteo] fetch failed:", err.message);
+    if (cached !== null) {
+      console.warn(`[openmeteo] serving stale value: ${cached}°C`);
+      return cached;
+    }
+    return null;
   }
 }
