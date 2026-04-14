@@ -6,6 +6,8 @@ services:
       - "3001:3000"
     environment:
       DISPLAY_MODE: web
+      # Set DEBUG=1 to enable verbose per-trip logging
+      # DEBUG: 1
       POLL_INTERVAL_MS: 30000
       DEPARTURES_PER_STOP: 10
       DEPARTURES_WINDOW_MINUTES: 90
