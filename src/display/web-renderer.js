@@ -40,6 +40,10 @@ td.mins{color:#e87c2a;font-size:38px;white-space:nowrap;width:160px;transition:c
 td.mins .n{font-size:54px;font-weight:700;color:#f5c87a;transition:color ${TRANSITION}}
 td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
 .delay{color:#e87c2a;font-size:34px;margin-left:10px;transition:color ${TRANSITION}}
+@keyframes rowExit{from{transform:translateY(0);opacity:1}to{transform:translateY(-32px);opacity:0}}
+@keyframes rowEnter{from{transform:translateY(32px);opacity:0}to{transform:translateY(0);opacity:1}}
+tr.exit{animation:rowExit 200ms ease-in forwards}
+tr.enter{animation:rowEnter 280ms ease-out both}
 body.day{background-color:#f0ede8;color:#2a2a2a}
 body.day #clock{color:#111}
 body.day #temp{color:#0070a0}
@@ -116,18 +120,22 @@ const CLIENT_JS = `
     fetch('/api/departures')
       .then(function(r){return r.json();})
       .then(function(data){
-        var rows=data.departures.map(function(d){
-          var logo=d.stopLogo?'<img src="/res/'+esc(d.stopLogo)+'" alt="" style="height:0.8em;vertical-align:middle;margin-left:0.35em;opacity:0.85">':'';
-          var delay=d.delayMinutes>0?'<span class="delay">+'+d.delayMinutes+'m</span>':'';
-          return '<tr>'
-            +'<td class="line">'+esc(d.line)+'</td>'
-            +'<td class="stop">'+esc(d.stop)+logo+'</td>'
-            +'<td class="mins" data-time="'+esc(d.time)+'">—</td>'
-            +'<td class="time">'+fmtTime(d.time)+delay+'</td>'
-            +'</tr>';
-        }).join('');
-        document.querySelector('tbody').innerHTML=rows;
-        tickCountdowns();
+        var tbody=document.querySelector('tbody');
+        tbody.querySelectorAll('tr').forEach(function(tr){tr.classList.add('exit');});
+        setTimeout(function(){
+          var rows=data.departures.map(function(d,i){
+            var logo=d.stopLogo?'<img src="/res/'+esc(d.stopLogo)+'" alt="" style="height:0.8em;vertical-align:middle;margin-left:0.35em;opacity:0.85">':'';
+            var delay=d.delayMinutes>0?'<span class="delay">+'+d.delayMinutes+'m</span>':'';
+            return '<tr class="enter" style="animation-delay:'+(i*60)+'ms">'
+              +'<td class="line">'+esc(d.line)+'</td>'
+              +'<td class="stop">'+esc(d.stop)+logo+'</td>'
+              +'<td class="mins" data-time="'+esc(d.time)+'">—</td>'
+              +'<td class="time">'+fmtTime(d.time)+delay+'</td>'
+              +'</tr>';
+          }).join('');
+          tbody.innerHTML=rows;
+          tickCountdowns();
+        },220);
       })
       .catch(function(){});
   }
