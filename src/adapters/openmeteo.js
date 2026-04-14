@@ -4,28 +4,22 @@
  */
 
 import fetch from "node-fetch";
-import { ONE_HOUR_MS } from "../config/constants.js";
+import { OPENMETEO_URL, CACHE_TTL_WEATHER_MS } from "../config/constants.js";
 
 const DEBUG = !!process.env.DEBUG;
-
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
-const URL =
-  "https://api.open-meteo.com/v1/forecast" +
-  "?latitude=49.1951&longitude=16.6068" +
-  "&current=temperature_2m&timezone=Europe%2FPrague";
 
 let cached = null;
 let cacheTime = 0;
 
 export async function getCurrentTemperatureBrno() {
   const now = Date.now();
-  if (cached !== null && now - cacheTime < CACHE_TTL_MS) {
-    if (DEBUG) console.debug(`[openmeteo] cache hit: ${cached}°C (${Math.round((CACHE_TTL_MS - (now - cacheTime)) / 60000)}min remaining)`);
+  if (cached !== null && now - cacheTime < CACHE_TTL_WEATHER_MS) {
+    if (DEBUG) console.debug(`[openmeteo] cache hit: ${cached}°C (${Math.round((CACHE_TTL_WEATHER_MS - (now - cacheTime)) / 60000)}min remaining)`);
     return cached;
   }
 
   try {
-    const res = await fetch(URL);
+    const res = await fetch(OPENMETEO_URL);
     if (!res.ok) throw new Error(`open-meteo ${res.status}`);
     const json = await res.json();
     const temp = json?.current?.temperature_2m;

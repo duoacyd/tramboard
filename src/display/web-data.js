@@ -5,8 +5,7 @@
 import { fetchDepartures } from "../adapters/kordis.js";
 import { getCurrentTemperatureBrno } from "../adapters/openmeteo.js";
 import { applyFilters } from "./terminal.js";
-
-const MAX_ROWS = 5;
+import { WEB_MAX_DISPLAY_ROWS } from "../config/constants.js";
 const DEBUG = !!process.env.DEBUG;
 
 function dbg(...args) {
@@ -38,7 +37,7 @@ export async function getAllDepartures(stops, windowMinutes) {
 
   const flat = results.flat().sort((a, b) => a.time - b.time);
   const filtered = flat.filter((d) => Math.round((d.time - new Date()) / 60000) > 1);
-  const final = filtered.slice(0, MAX_ROWS);
+  const final = filtered.slice(0, WEB_MAX_DISPLAY_ROWS);
 
   if (DEBUG) {
     console.debug(`[web-data] merged total=${flat.length} after >1min filter=${filtered.length} after slice=${final.length}`);

@@ -3,7 +3,7 @@
  * Pure functions — no I/O, no side effects.
  */
 
-const TIMEZONE = "Europe/Prague";
+import { TIMEZONE } from "../config/constants.js";
 
 function htmlEscape(s) {
   return String(s ?? "")

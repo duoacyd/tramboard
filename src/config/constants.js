@@ -22,3 +22,10 @@ export const LINE_ID_PREFIX = "L";
 
 export const TIMEZONE = "Europe/Prague";
 export const DEFAULT_WINDOW_MINUTES = 90;
+export const WEB_MAX_DISPLAY_ROWS = 5;
+
+export const OPENMETEO_URL =
+  "https://api.open-meteo.com/v1/forecast" +
+  "?latitude=49.1951&longitude=16.6068" +
+  "&current=temperature_2m&timezone=Europe%2FPrague";
+export const CACHE_TTL_WEATHER_MS = 10 * 60 * 1000; // 10 min
