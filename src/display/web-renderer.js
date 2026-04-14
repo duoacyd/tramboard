@@ -40,7 +40,7 @@ td.mins{color:#e87c2a;font-size:38px;white-space:nowrap;width:160px;transition:c
 td.mins .n{font-size:54px;font-weight:700;color:#f5c87a;transition:color ${TRANSITION}}
 td.mins.urgent{color:#ff5050}td.mins.urgent .n{color:#ff5050}
 td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
-.delay{color:#e87c2a;font-size:34px;margin-left:10px;transition:color ${TRANSITION}}
+.delay{color:#ff4444;font-size:34px;margin-left:10px;transition:color ${TRANSITION}}
 @keyframes rowExit{from{transform:translateY(0);opacity:1}to{transform:translateY(-32px);opacity:0}}
 @keyframes rowEnter{from{transform:translateY(32px);opacity:0}to{transform:translateY(0);opacity:1}}
 tr.exit{animation:rowExit 200ms ease-in forwards}
@@ -210,7 +210,7 @@ function buildRows(departures) {
   <td class="line">${htmlEscape(d.routeShortName)}</td>
   <td class="stop">${htmlEscape(d.stopName)}${logoHtml}</td>
   <td class="mins" data-time="${iso}">—</td>
-  <td class="time">${formatTime(d.time)}${delayBadge}</td>
+  <td class="time">${formatTime(d.scheduledTime ?? d.time)}${delayBadge}</td>
 </tr>`;
   }).join("");
 }
@@ -223,7 +223,7 @@ export function renderRows(departures) {
   <td class="line">${htmlEscape(d.routeShortName)}</td>
   <td class="stop">${htmlEscape(d.stopName)}${logoHtml}</td>
   <td class="mins" data-time="${iso}">—</td>
-  <td class="time">${formatTime(d.time)}${delayBadge}</td>
+  <td class="time">${formatTime(d.scheduledTime ?? d.time)}${delayBadge}</td>
 </tr>`;
   }).join("");
 }

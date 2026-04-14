@@ -33,6 +33,7 @@ function mergeWithRealtime(trips, delaysByLine) {
 
     return {
       time,
+      scheduledTime: new Date(t.scheduledDeparture),
       tripId: t.tripId,
       isRealtime: hasRealtime,
       delaySeconds: hasRealtime ? delayMinutes * 60 : 0,
