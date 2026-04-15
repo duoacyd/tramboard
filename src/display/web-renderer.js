@@ -44,9 +44,9 @@ td.mins.urgent .n{color:#ff5050;transition:none}
 td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
 .delay{color:#ff4444;font-size:34px;margin-left:10px;transition:color ${TRANSITION}}
 @keyframes rowExit{from{transform:translateY(0);opacity:1}to{transform:translateY(-32px);opacity:0}}
-@keyframes rowEnter{from{transform:translateY(32px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes rowFlip{0%,100%{transform:scaleY(1);opacity:1}40%,60%{transform:scaleY(0);opacity:0}}
 tr.exit{animation:rowExit 200ms ease-in forwards}
-tr.enter{animation:rowEnter 280ms ease-out both}
+tr.flip{animation:rowFlip 200ms ease-in-out both;transform-origin:center}
 body.day{background-color:#f0ede8;color:#2a2a2a}
 body.day #clock{color:#111}
 body.day #temp{color:#0070a0}
@@ -156,22 +156,40 @@ const CLIENT_JS = `
     Object.keys(oldMap).forEach(function(key){if(!newKeys.has(key))oldMap[key].classList.add('exit');});
     setTimeout(function(){
       var frag=document.createDocumentFragment();
-      newRows.forEach(function(newTr){
+      var toFlip=[];
+      newRows.forEach(function(newTr,i){
         var key=newTr.dataset.key;
+        var tr;
         if(key&&oldMap[key]){
-          var oldTr=oldMap[key];
-          oldTr.classList.remove('enter','exit');
-          var om=oldTr.querySelector('.mins'),nm=newTr.querySelector('.mins');
+          tr=oldMap[key];
+          var om=tr.querySelector('.mins'),nm=newTr.querySelector('.mins');
+          var ot=tr.querySelector('.time'),nt=newTr.querySelector('.time');
+          var changed=om&&nm&&om.dataset.time!==nm.dataset.time;
+          // cancel any in-progress animation before touching classes
+          tr.classList.remove('enter','exit','flip');
+          tr.style.animationDelay='';
+          // update data immediately so tickCountdowns always sees correct values
           if(om&&nm)om.dataset.time=nm.dataset.time;
-          var ot=oldTr.querySelector('.time'),nt=newTr.querySelector('.time');
           if(ot&&nt)ot.innerHTML=nt.innerHTML;
-          frag.appendChild(oldTr);
+          tr.dataset.min=newTr.dataset.min;
+          if(changed)toFlip.push({tr:tr,i:i});
         }else{
-          frag.appendChild(newTr);
+          tr=newTr;
+          tr.classList.remove('enter','exit','flip');
+          tr.style.animationDelay='';
+          toFlip.push({tr:tr,i:i});
         }
+        frag.appendChild(tr);
       });
       tbody.innerHTML='';
       tbody.appendChild(frag);
+      // double-rAF: let browser paint the clean DOM before starting animations
+      requestAnimationFrame(function(){requestAnimationFrame(function(){
+        toFlip.forEach(function(item){
+          item.tr.style.animationDelay=(item.i*40)+'ms';
+          item.tr.classList.add('flip');
+        });
+      });});
       tickCountdowns();
     },220);
   });
