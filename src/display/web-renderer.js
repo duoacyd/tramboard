@@ -85,7 +85,7 @@ body.sunset .delay{color:#ffb060}
 const CLIENT_JS = `
 (function(){
   var srISO=window._SR||'',ssISO=window._SS||'',currentFp='',flipTimer=null;
-  var FLIP_OUT_MS=540;
+  var FLIP_OUT_MS=940;
   function n(v){return '<span class="n">'+v+'</span>';}
   function fmt(diff){
     if(diff<=0) return 'now';
@@ -101,11 +101,18 @@ const CLIENT_JS = `
       var diffMin=Math.round(diffMs/60000);
       var tr=el.closest('tr');
       var min=tr?parseInt(tr.dataset.min||'1',10):1;
-      if(diffMs<min*60000){if(tr)tr.remove();needRefresh=true;return;}
+      if(diffMs<min*60000){
+        if(tr){
+          var ph=document.createElement('tr');
+          ph.innerHTML='<td class="line"></td><td class="stop"></td><td class="mins"></td><td class="time"></td>';
+          tr.replaceWith(ph);
+        }
+        needRefresh=true;return;
+      }
       el.classList.toggle('urgent',diffMin===min&&diffSec%60<30);
       el.innerHTML=fmt(diffMin);
     });
-    if(needRefresh){
+    if(needRefresh&&!flipTimer){
       var tbody=document.querySelector('tbody[hx-get]');
       if(tbody){currentFp='';htmx.ajax('GET',tbody.getAttribute('hx-get'),{target:tbody,swap:'innerHTML'});}
     }
@@ -186,12 +193,17 @@ const CLIENT_JS = `
         }
         frag.appendChild(tr);
       });
+      // pad to always have 6 rows so the table never shrinks
+      while(frag.childElementCount<6){
+        var ph=document.createElement('tr');
+        ph.innerHTML='<td class="line"></td><td class="stop"></td><td class="mins"></td><td class="time"></td>';
+        frag.appendChild(ph);
+      }
       tbody.innerHTML='';
       tbody.appendChild(frag);
-      // tick first so any past-threshold rows are removed before we animate
       tickCountdowns();
-      // collect what's still in the DOM and flip in top-to-bottom
-      var rows=Array.from(tbody.querySelectorAll('tr'));
+      // only animate rows that have real departure data
+      var rows=Array.from(tbody.querySelectorAll('tr[data-key]'));
       requestAnimationFrame(function(){requestAnimationFrame(function(){
         rows.forEach(function(tr,i){
           tr.style.animationDelay=(i*160)+'ms';
