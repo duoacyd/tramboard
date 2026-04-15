@@ -38,7 +38,9 @@ td.line{font-weight:700;color:#fff;padding-right:28px;white-space:nowrap;width:8
 td.stop{color:#aaa;font-size:50px;padding-right:28px;white-space:nowrap;transition:color ${TRANSITION}}
 td.mins{color:#e87c2a;font-size:38px;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
 td.mins .n{font-size:54px;font-weight:700;color:#f5c87a;transition:color ${TRANSITION}}
-td.mins.urgent{color:#ff5050;text-shadow:0 0 12px #ff505099}td.mins.urgent .n{color:#ff5050}
+@keyframes urgentBreath{0%,100%{opacity:1}50%{opacity:0.2}}
+td.mins.urgent{color:#ff5050;text-shadow:0 0 12px #ff505099;animation:urgentBreath 1.5s ease-in-out infinite;transition:none}
+td.mins.urgent .n{color:#ff5050;transition:none}
 td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
 .delay{color:#ff4444;font-size:34px;margin-left:10px;transition:color ${TRANSITION}}
 @keyframes rowExit{from{transform:translateY(0);opacity:1}to{transform:translateY(-32px);opacity:0}}
@@ -95,7 +97,7 @@ const CLIENT_JS = `
       var diffMin=Math.round(diffMs/60000);
       var tr=el.closest('tr');
       var min=tr?parseInt(tr.dataset.min||'1',10):1;
-      if(diffMin<min){if(tr)tr.remove();return;}
+      if(diffMs<min*60000){if(tr)tr.remove();return;}
       el.classList.toggle('urgent',diffMin===min&&diffSec%60<30);
       el.innerHTML=fmt(diffMin);
     });
@@ -244,6 +246,7 @@ export function renderHtml(departures, weather) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="color-scheme" content="light dark">
 <title>Trams</title>
 <style>${CSS}</style>
 <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
