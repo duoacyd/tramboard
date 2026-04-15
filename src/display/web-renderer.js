@@ -44,9 +44,11 @@ td.mins.urgent .n{color:#ff5050;transition:none}
 td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
 .delay{color:#ff4444;font-size:34px;margin-left:10px;transition:color ${TRANSITION}}
 @keyframes rowExit{from{transform:translateY(0);opacity:1}to{transform:translateY(-32px);opacity:0}}
-@keyframes rowFlip{0%,100%{transform:scaleY(1);opacity:1}40%,60%{transform:scaleY(0);opacity:0}}
+@keyframes rowFlipOut{from{transform:scaleY(1);opacity:1}to{transform:scaleY(0);opacity:0}}
+@keyframes rowFlipIn{from{transform:scaleY(0);opacity:0}to{transform:scaleY(1);opacity:1}}
 tr.exit{animation:rowExit 200ms ease-in forwards}
-tr.flip{animation:rowFlip 550ms ease-in-out both;transform-origin:center}
+tr.flip-out{animation:rowFlipOut 220ms ease-in forwards;transform-origin:center}
+tr.flip-in{animation:rowFlipIn 350ms ease-out forwards;transform-origin:center}
 body.day{background-color:#f0ede8;color:#2a2a2a}
 body.day #clock{color:#111}
 body.day #temp{color:#0070a0}
@@ -82,7 +84,8 @@ body.sunset .delay{color:#ffb060}
 // Client JS extracted as a named constant
 const CLIENT_JS = `
 (function(){
-  var srISO=window._SR||'',ssISO=window._SS||'',currentFp='';
+  var srISO=window._SR||'',ssISO=window._SS||'',currentFp='',flipTimer=null;
+  var FLIP_OUT_MS=220;
   function n(v){return '<span class="n">'+v+'</span>';}
   function fmt(diff){
     if(diff<=0) return 'now';
@@ -152,46 +155,50 @@ const CLIENT_JS = `
     var newRows=Array.from(tmp.querySelectorAll('tr'));
     var oldMap={};
     tbody.querySelectorAll('tr').forEach(function(tr){if(tr.dataset.key)oldMap[tr.dataset.key]=tr;});
-    var newKeys=new Set(newRows.map(function(tr){return tr.dataset.key;}).filter(Boolean));
-    Object.keys(oldMap).forEach(function(key){if(!newKeys.has(key))oldMap[key].classList.add('exit');});
-    setTimeout(function(){
+    // flip all visible rows out at once
+    tbody.querySelectorAll('tr').forEach(function(tr){
+      tr.classList.remove('flip-out','flip-in');
+      tr.style.animationDelay='';
+      void tr.offsetWidth;
+      tr.classList.add('flip-out');
+    });
+    // cancel any pending flip-in from a previous update
+    if(flipTimer)clearTimeout(flipTimer);
+    flipTimer=setTimeout(function(){
+      flipTimer=null;
       var frag=document.createDocumentFragment();
-      var toFlip=[];
-      newRows.forEach(function(newTr,i){
+      newRows.forEach(function(newTr){
         var key=newTr.dataset.key;
         var tr;
         if(key&&oldMap[key]){
           tr=oldMap[key];
+          tr.classList.remove('flip-out','flip-in');
+          tr.style.animationDelay='';
           var om=tr.querySelector('.mins'),nm=newTr.querySelector('.mins');
           var ot=tr.querySelector('.time'),nt=newTr.querySelector('.time');
-          var changed=om&&nm&&om.dataset.time!==nm.dataset.time;
-          // cancel any in-progress animation before touching classes
-          tr.classList.remove('enter','exit','flip');
-          tr.style.animationDelay='';
-          // update data immediately so tickCountdowns always sees correct values
           if(om&&nm)om.dataset.time=nm.dataset.time;
           if(ot&&nt)ot.innerHTML=nt.innerHTML;
           tr.dataset.min=newTr.dataset.min;
-          if(changed)toFlip.push({tr:tr,i:i});
         }else{
           tr=newTr;
-          tr.classList.remove('enter','exit','flip');
+          tr.classList.remove('enter','flip-out','flip-in');
           tr.style.animationDelay='';
-          toFlip.push({tr:tr,i:i});
         }
         frag.appendChild(tr);
       });
       tbody.innerHTML='';
       tbody.appendChild(frag);
-      // double-rAF: let browser paint the clean DOM before starting animations
+      // tick first so any past-threshold rows are removed before we animate
+      tickCountdowns();
+      // collect what's still in the DOM and flip in top-to-bottom
+      var rows=Array.from(tbody.querySelectorAll('tr'));
       requestAnimationFrame(function(){requestAnimationFrame(function(){
-        toFlip.forEach(function(item){
-          item.tr.style.animationDelay=(item.i*160)+'ms';
-          item.tr.classList.add('flip');
+        rows.forEach(function(tr,i){
+          tr.style.animationDelay=(i*80)+'ms';
+          tr.classList.add('flip-in');
         });
       });});
-      tickCountdowns();
-    },220);
+    },FLIP_OUT_MS);
   });
   requestAnimationFrame(function(){requestAnimationFrame(function(){document.body.classList.remove('no-transition');});});
   tickCountdowns();
