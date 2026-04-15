@@ -46,7 +46,7 @@ td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:co
 @keyframes rowExit{from{transform:translateY(0);opacity:1}to{transform:translateY(-32px);opacity:0}}
 @keyframes rowFlip{0%,100%{transform:scaleY(1);opacity:1}40%,60%{transform:scaleY(0);opacity:0}}
 tr.exit{animation:rowExit 200ms ease-in forwards}
-tr.flip{animation:rowFlip 350ms ease-in-out both;transform-origin:center}
+tr.flip{animation:rowFlip 550ms ease-in-out both;transform-origin:center}
 body.day{background-color:#f0ede8;color:#2a2a2a}
 body.day #clock{color:#111}
 body.day #temp{color:#0070a0}
@@ -186,7 +186,7 @@ const CLIENT_JS = `
       // double-rAF: let browser paint the clean DOM before starting animations
       requestAnimationFrame(function(){requestAnimationFrame(function(){
         toFlip.forEach(function(item){
-          item.tr.style.animationDelay=(item.i*80)+'ms';
+          item.tr.style.animationDelay=(item.i*160)+'ms';
           item.tr.classList.add('flip');
         });
       });});
