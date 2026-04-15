@@ -47,8 +47,8 @@ td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:co
 @keyframes rowFlipOut{from{transform:scaleY(1);opacity:1}to{transform:scaleY(0);opacity:0}}
 @keyframes rowFlipIn{from{transform:scaleY(0);opacity:0}to{transform:scaleY(1);opacity:1}}
 tr.exit{animation:rowExit 200ms ease-in forwards}
-tr.flip-out{animation:rowFlipOut 220ms ease-in forwards;transform-origin:center}
-tr.flip-in{animation:rowFlipIn 350ms ease-out forwards;transform-origin:center}
+tr.flip-out{animation:rowFlipOut 440ms ease-in forwards;transform-origin:center}
+tr.flip-in{animation:rowFlipIn 550ms ease-out forwards;transform-origin:center}
 body.day{background-color:#f0ede8;color:#2a2a2a}
 body.day #clock{color:#111}
 body.day #temp{color:#0070a0}
@@ -85,7 +85,7 @@ body.sunset .delay{color:#ffb060}
 const CLIENT_JS = `
 (function(){
   var srISO=window._SR||'',ssISO=window._SS||'',currentFp='',flipTimer=null;
-  var FLIP_OUT_MS=220;
+  var FLIP_OUT_MS=540;
   function n(v){return '<span class="n">'+v+'</span>';}
   function fmt(diff){
     if(diff<=0) return 'now';
@@ -194,7 +194,7 @@ const CLIENT_JS = `
       var rows=Array.from(tbody.querySelectorAll('tr'));
       requestAnimationFrame(function(){requestAnimationFrame(function(){
         rows.forEach(function(tr,i){
-          tr.style.animationDelay=(i*80)+'ms';
+          tr.style.animationDelay=(i*160)+'ms';
           tr.classList.add('flip-in');
         });
       });});
