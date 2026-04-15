@@ -91,16 +91,21 @@ const CLIENT_JS = `
     return n(h)+'h'+(m?'\\u00a0'+n(m)+'m':'');
   }
   function tickCountdowns(){
+    var needRefresh=false;
     document.querySelectorAll('.mins[data-time]').forEach(function(el){
       var diffMs=new Date(el.dataset.time)-new Date();
       var diffSec=Math.round(diffMs/1000);
       var diffMin=Math.round(diffMs/60000);
       var tr=el.closest('tr');
       var min=tr?parseInt(tr.dataset.min||'1',10):1;
-      if(diffMs<min*60000){if(tr)tr.remove();return;}
+      if(diffMs<min*60000){if(tr)tr.remove();needRefresh=true;return;}
       el.classList.toggle('urgent',diffMin===min&&diffSec%60<30);
       el.innerHTML=fmt(diffMin);
     });
+    if(needRefresh){
+      var tbody=document.querySelector('tbody[hx-get]');
+      if(tbody)htmx.ajax('GET',tbody.getAttribute('hx-get'),{target:tbody,swap:'innerHTML'});
+    }
   }
   function tickClock(){
     document.getElementById('clock').textContent=
