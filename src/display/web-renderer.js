@@ -47,8 +47,8 @@ td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:co
 @keyframes rowFlipOut{from{transform:scaleY(1);opacity:1}to{transform:scaleY(0);opacity:0}}
 @keyframes rowFlipIn{from{transform:scaleY(0);opacity:0}to{transform:scaleY(1);opacity:1}}
 tr.exit{animation:rowExit 200ms ease-in forwards}
-tr.flip-out{animation:rowFlipOut 440ms ease-in forwards;transform-origin:center}
-tr.flip-in{animation:rowFlipIn 550ms ease-out forwards;transform-origin:center}
+tr.flip-out{animation:rowFlipOut 1320ms ease-in forwards;transform-origin:center}
+tr.flip-in{animation:rowFlipIn 1650ms ease-out forwards;transform-origin:center}
 body.day{background-color:#f0ede8;color:#2a2a2a}
 body.day #clock{color:#111}
 body.day #temp{color:#0070a0}
@@ -86,7 +86,7 @@ body.night .city-logo,body.sunset .city-logo{filter:invert(1)}
 const CLIENT_JS = `
 (function(){
   var srISO=window._SR||'',ssISO=window._SS||'',currentFp='',flipTimer=null;
-  var FLIP_OUT_MS=940;
+  var STAGGER=480,FLIP_OUT_DURATION=1320;
   function n(v){return '<span class="n">'+v+'</span>';}
   function fmt(diff){
     if(diff<=0) return 'now';
@@ -163,15 +163,17 @@ const CLIENT_JS = `
     var newRows=Array.from(tmp.querySelectorAll('tr'));
     var oldMap={};
     tbody.querySelectorAll('tr').forEach(function(tr){if(tr.dataset.key)oldMap[tr.dataset.key]=tr;});
-    // flip all visible rows out at once
-    tbody.querySelectorAll('tr').forEach(function(tr){
+    // staggered wave flip-out: first row first, then each subsequent row
+    var allRows=Array.from(tbody.querySelectorAll('tr'));
+    allRows.forEach(function(tr,i){
       tr.classList.remove('flip-out','flip-in');
-      tr.style.animationDelay='';
+      tr.style.animationDelay=(i*STAGGER)+'ms';
       void tr.offsetWidth;
       tr.classList.add('flip-out');
     });
     // cancel any pending flip-in from a previous update
     if(flipTimer)clearTimeout(flipTimer);
+    var flipOutMs=(allRows.length>1?(allRows.length-1)*STAGGER:0)+FLIP_OUT_DURATION;
     flipTimer=setTimeout(function(){
       flipTimer=null;
       var frag=document.createDocumentFragment();
@@ -207,11 +209,11 @@ const CLIENT_JS = `
       var rows=Array.from(tbody.querySelectorAll('tr[data-key]'));
       requestAnimationFrame(function(){requestAnimationFrame(function(){
         rows.forEach(function(tr,i){
-          tr.style.animationDelay=(i*160)+'ms';
+          tr.style.animationDelay=(i*STAGGER)+'ms';
           tr.classList.add('flip-in');
         });
       });});
-    },FLIP_OUT_MS);
+    },flipOutMs);
   });
   requestAnimationFrame(function(){requestAnimationFrame(function(){document.body.classList.remove('no-transition');});});
   tickCountdowns();
