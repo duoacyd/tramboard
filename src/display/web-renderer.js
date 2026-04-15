@@ -86,7 +86,7 @@ body.night .city-logo,body.sunset .city-logo{filter:invert(1)}
 // Client JS extracted as a named constant
 const CLIENT_JS = `
 (function(){
-  var srISO=window._SR||'',ssISO=window._SS||'',currentFp='',flipTimer=null,pendingRefresh=false;
+  var srISO=window._SR||'',ssISO=window._SS||'',currentFp='',flipTimer=null;
   var STAGGER=320,FLIP_OUT_DURATION=880;
   function n(v){return '<span class="n">'+v+'</span>';}
   function fmt(diff){
@@ -103,21 +103,14 @@ const CLIENT_JS = `
       var tr=el.closest('tr');
       var min=tr?parseInt(tr.dataset.min||'1',10):1;
       if(diffMs<min*60000){
-        if(tr){
-          var ph=document.createElement('tr');
-          ph.innerHTML='<td class="line">\u00a0</td><td class="stop"></td><td class="mins"></td><td class="time"></td>';
-          tr.replaceWith(ph);
-        }
-        pendingRefresh=true;return;
+        el.removeAttribute('data-time');
+        el.classList.remove('urgent');
+        el.innerHTML='DEPARTED';
+        return;
       }
       el.classList.toggle('urgent',diffMin===min&&diffSec%60<30);
       el.innerHTML=fmt(diffMin);
     });
-    if(pendingRefresh&&!flipTimer){
-      pendingRefresh=false;
-      var tbody=document.querySelector('tbody[hx-get]');
-      if(tbody){currentFp='';htmx.ajax('GET',tbody.getAttribute('hx-get'),{target:tbody,swap:'innerHTML'});}
-    }
   }
   function tickClock(){
     document.getElementById('clock').textContent=
@@ -159,6 +152,11 @@ const CLIENT_JS = `
     if(fp) currentFp=fp;
     evt.detail.shouldSwap=false;
     var tbody=evt.detail.target;
+    // only animate when there are departed rows to replace
+    var hasDeparted=Array.from(tbody.querySelectorAll('td.mins')).some(function(el){
+      return el.textContent==='DEPARTED';
+    });
+    if(!hasDeparted) return;
     var tmp=document.createElement('tbody');
     tmp.innerHTML=evt.detail.serverResponse;
     var newRows=Array.from(tmp.querySelectorAll('tr'));
