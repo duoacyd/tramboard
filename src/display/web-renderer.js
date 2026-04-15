@@ -47,8 +47,8 @@ td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:co
 @keyframes rowFlipOut{from{transform:scaleY(1);opacity:1}to{transform:scaleY(0);opacity:0}}
 @keyframes rowFlipIn{from{transform:scaleY(0);opacity:0}to{transform:scaleY(1);opacity:1}}
 tr.exit{animation:rowExit 200ms ease-in forwards}
-tr.flip-out{animation:rowFlipOut 1320ms ease-in forwards;transform-origin:center}
-tr.flip-in{animation:rowFlipIn 1650ms ease-out forwards;transform-origin:center}
+tr.flip-out{animation:rowFlipOut 880ms ease-in forwards;transform-origin:center}
+tr.flip-in{animation:rowFlipIn 1100ms ease-out forwards;transform-origin:center}
 body.day{background-color:#f0ede8;color:#2a2a2a}
 body.day #clock{color:#111}
 body.day #temp{color:#0070a0}
@@ -86,7 +86,7 @@ body.night .city-logo,body.sunset .city-logo{filter:invert(1)}
 const CLIENT_JS = `
 (function(){
   var srISO=window._SR||'',ssISO=window._SS||'',currentFp='',flipTimer=null;
-  var STAGGER=480,FLIP_OUT_DURATION=1320;
+  var STAGGER=320,FLIP_OUT_DURATION=880;
   function n(v){return '<span class="n">'+v+'</span>';}
   function fmt(diff){
     if(diff<=0) return 'now';
@@ -105,7 +105,7 @@ const CLIENT_JS = `
       if(diffMs<min*60000){
         if(tr){
           var ph=document.createElement('tr');
-          ph.innerHTML='<td class="line"></td><td class="stop"></td><td class="mins"></td><td class="time"></td>';
+          ph.innerHTML='<td class="line">\u00a0</td><td class="stop"></td><td class="mins"></td><td class="time"></td>';
           tr.replaceWith(ph);
         }
         needRefresh=true;return;
@@ -199,7 +199,7 @@ const CLIENT_JS = `
       // pad to always have 6 rows so the table never shrinks
       while(frag.childElementCount<6){
         var ph=document.createElement('tr');
-        ph.innerHTML='<td class="line"></td><td class="stop"></td><td class="mins"></td><td class="time"></td>';
+        ph.innerHTML='<td class="line">\u00a0</td><td class="stop"></td><td class="mins"></td><td class="time"></td>';
         frag.appendChild(ph);
       }
       tbody.innerHTML='';
