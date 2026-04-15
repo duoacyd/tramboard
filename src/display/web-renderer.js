@@ -262,7 +262,7 @@ export function renderHtml(departures, weather) {
   <div id="clock">—</div>
   <div id="temp">${tempHtml}</div>
 </div>
-<table><tbody hx-get="/api/rows" hx-trigger="every 30s" hx-swap="innerHTML">${buildRows(departures)}</tbody></table>
+<table><tbody hx-get="/api/rows" hx-trigger="every 15s" hx-swap="innerHTML">${buildRows(departures)}</tbody></table>
 <script>${CLIENT_JS}</script>
 </body>
 </html>`;
