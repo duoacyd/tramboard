@@ -49,11 +49,11 @@ body.day{background-color:#f0ede8;color:#2a2a2a}
 body.day #clock{color:#111}
 body.day #temp{color:#0070a0}
 body.day td{border-bottom-color:#d8d4d0}
-body.day td.line{color:#111}
-body.day td.stop{color:#555}
+body.day td.line{color:#0070a0}
+body.day td.stop{color:#111}
 body.day td.mins{color:#c05000}
 body.day td.mins .n{color:#b06000}
-body.day td.time{color:#111}
+body.day td.time{color:#0070a0}
 body.day .delay{color:#c05000}
 body.sunrise{background-color:#fde8c8;color:#3d1a00}
 body.sunrise #clock{color:#2d0e00}
