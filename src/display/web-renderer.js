@@ -98,8 +98,7 @@ const CLIENT_JS = `
   function tickCountdowns(){
     document.querySelectorAll('.mins[data-time]').forEach(function(el){
       var diffMs=new Date(el.dataset.time)-new Date();
-      var diffSec=Math.round(diffMs/1000);
-      var diffMin=Math.round(diffMs/60000);
+      var diffMin=Math.floor(diffMs/60000);
       var tr=el.closest('tr');
       var min=tr?parseInt(tr.dataset.min||'1',10):1;
       if(diffMs<min*60000){
@@ -108,7 +107,7 @@ const CLIENT_JS = `
         el.innerHTML='DEPARTED';
         return;
       }
-      el.classList.toggle('urgent',diffMin===min&&diffSec%60<30);
+      el.classList.toggle('urgent',diffMs<(min*60+30)*1000);
       el.innerHTML=fmt(diffMin);
     });
   }
