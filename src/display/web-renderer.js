@@ -22,7 +22,7 @@ function formatTime(date) {
   });
 }
 
-const TRANSITION = "30s ease-in-out";
+const TRANSITION = "900s ease-in-out";
 
 // CSS extracted as a named constant so it can be read/edited independently
 const CSS = `
@@ -79,6 +79,7 @@ body.sunset td.mins{color:#ffb060}
 body.sunset td.mins .n{color:#ffd080}
 body.sunset td.time{color:#fff}
 body.sunset .delay{color:#ffb060}
+body.night .city-logo,body.sunset .city-logo{filter:invert(1)}
 `;
 
 // Client JS extracted as a named constant
@@ -240,7 +241,7 @@ function buildRow(d) {
   const delayMins = d.isRealtime ? Math.round(d.delaySeconds / 60) : 0;
   const delayBadge = delayMins > 0 ? `<span class="delay">+${delayMins}m</span>` : "";
   const logoHtml = d.stopLogo
-    ? `<img src="/res/${htmlEscape(d.stopLogo)}" alt="" style="height:0.8em;vertical-align:middle;margin-left:0.35em;opacity:0.85">`
+    ? `<img src="/res/${htmlEscape(d.stopLogo)}" alt=""${d.stopLogo === "City-icon.png" ? ' class="city-logo"' : ''} style="height:0.8em;vertical-align:middle;margin-left:0.35em;opacity:0.85">`
     : "";
   const key = d.tripId ? htmlEscape(d.tripId) : `${htmlEscape(d.routeShortName)}-${iso}`;
   return { iso, key, delayBadge, logoHtml };
