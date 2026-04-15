@@ -53,7 +53,7 @@ export async function getAllDepartures(stops, windowMinutes) {
   }
   const deduped = [...seen.values()].sort((a, b) => a.time - b.time);
 
-  const filtered = deduped.filter((d) => Math.round((d.time - new Date()) / 60000) >= (d.minMinutes ?? 1));
+  const filtered = deduped.filter((d) => (d.time - new Date()) >= (d.minMinutes ?? 1) * 60000);
   const final = filtered.slice(0, WEB_MAX_DISPLAY_ROWS);
 
   if (DEBUG) {

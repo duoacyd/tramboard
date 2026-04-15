@@ -104,7 +104,7 @@ const CLIENT_JS = `
     });
     if(needRefresh){
       var tbody=document.querySelector('tbody[hx-get]');
-      if(tbody)htmx.ajax('GET',tbody.getAttribute('hx-get'),{target:tbody,swap:'innerHTML'});
+      if(tbody){currentFp='';htmx.ajax('GET',tbody.getAttribute('hx-get'),{target:tbody,swap:'innerHTML'});}
     }
   }
   function tickClock(){
