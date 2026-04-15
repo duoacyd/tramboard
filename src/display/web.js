@@ -12,7 +12,7 @@ import { getAllDepartures, getWeather } from "./web-data.js";
 import { renderHtml, renderJson, renderRows } from "./web-renderer.js";
 
 // explicit allowlist — never resolve arbitrary filenames from user input
-const STATIC_FILES = new Set(["Albert_logo.svg.png", "Lidl-Logo.svg.png"]);
+const STATIC_FILES = new Set(["Albert_logo.svg.png", "Lidl-Logo.svg.png", "City-icon.png"]);
 
 async function serveStatic(filename) {
   if (!STATIC_FILES.has(filename)) {
