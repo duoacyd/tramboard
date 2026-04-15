@@ -17,10 +17,10 @@ services:
       # line filter uses routeShortName exact match (string)
       STOPS: |
         [
-          { "stopId": "U1398Z2", "name": "Mostecká",    "direction": "", "minMinutes": 2, logo: "City-icon.png"},
-          { "stopId": "U1782Z2", "name": "Zdráhalova",  "direction": "", "minMinutes": 2, logo: "City-icon.png"},
+          { "stopId": "U1398Z2", "name": "Mostecká",    "direction": "", "minMinutes": 2, "logo": "City-icon.png"},
+          { "stopId": "U1782Z2", "name": "Zdráhalova",  "direction": "", "minMinutes": 2, "logo": "City-icon.png"},
           { "stopId": "U1782Z1", "name": "Zdráhalova",  "direction": "", "minMinutes": 2, "lines": ["5"], "logo": "Albert_logo.svg.png" },
-          { "stopId": "U1667Z2", "name": "Tomanova",    "direction": "", "minMinutes": 3, logo: "City-icon.png" },
+          { "stopId": "U1667Z2", "name": "Tomanova",    "direction": "", "minMinutes": 3, "logo": "City-icon.png" },
           { "stopId": "U1667Z1", "name": "Tomanova",    "direction": "", "minMinutes": 3, "lines": ["9", "7"], "logo": "Lidl-Logo.svg.png" },
-          { "stopId": "U1211Z8", "name": "Jugoslávská", "direction": "", "minMinutes": 2, "lines": ["3"], logo: "City-icon.png" }
+          { "stopId": "U1211Z8", "name": "Jugoslávská", "direction": "", "minMinutes": 2, "lines": ["3"], "logo": "City-icon.png" }
         ]
