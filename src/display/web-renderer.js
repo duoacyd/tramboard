@@ -31,6 +31,7 @@ body{background:#0d0d0d;color:#c8c8c8;font-family:monospace;font-size:58px;paddi
 body.no-transition,body.no-transition *{transition:none!important}
 #topbar{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px}
 #clock{font-size:56px;font-weight:700;color:#fff;letter-spacing:0.04em;transition:color ${TRANSITION}}
+#date{font-size:44px;color:#aaa;letter-spacing:0.03em;transition:color ${TRANSITION}}
 #temp{font-size:48px;color:#7ecfff;transition:color ${TRANSITION}}
 table{width:100%;border-collapse:collapse}
 td{padding:24px 0;border-bottom:1px solid #1a1a1a;vertical-align:middle;transition:border-bottom-color ${TRANSITION}}
@@ -57,6 +58,7 @@ tr.flip-in{animation:rowFlipIn 1100ms ease-out both;transform-origin:center}
 tr.pre-flip{transform:scaleY(0);opacity:0;transform-origin:center}
 body.day{background-color:#f0ede8;color:#2a2a2a}
 body.day #clock{color:#111}
+body.day #date{color:#555}
 body.day #temp{color:#0070a0}
 body.day td{border-bottom-color:#d8d4d0}
 body.day td.line{color:#0070a0}
@@ -67,6 +69,7 @@ body.day td.time{color:#0070a0}
 body.day .delay{color:#c05000}
 body.sunrise{background-color:#fde8c8;color:#3d1a00}
 body.sunrise #clock{color:#2d0e00}
+body.sunrise #date{color:#7a4a20}
 body.sunrise #temp{color:#6060a0}
 body.sunrise td{border-bottom-color:#e8c090}
 body.sunrise td.line{color:#2d0e00}
@@ -77,6 +80,7 @@ body.sunrise td.time{color:#2d0e00}
 body.sunrise .delay{color:#d4800a}
 body.sunset{background-color:#c04820;color:#ffe8d0}
 body.sunset #clock{color:#fff}
+body.sunset #date{color:#ffccaa}
 body.sunset #temp{color:#ffe0b0}
 body.sunset td{border-bottom-color:#a03018}
 body.sunset td.line{color:#fff}
@@ -120,6 +124,16 @@ const CLIENT_JS = `
   function tickClock(){
     document.getElementById('clock').textContent=
       new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Europe/Prague'});
+  }
+  function tickDate(){
+    var d=new Date();
+    var parts=new Intl.DateTimeFormat('sk-SK',{weekday:'short',day:'numeric',month:'numeric',timeZone:'Europe/Prague'}).formatToParts(d);
+    var map={};
+    parts.forEach(function(p){map[p.type]=p.value;});
+    var wd=map.weekday||'';
+    wd=wd.charAt(0).toUpperCase()+wd.slice(1).replace(/\.$/,'');
+    var el=document.getElementById('date');
+    if(el) el.textContent=wd+' '+map.day+'.'+map.month+'.';
   }
   function getMode(){
     if(!srISO||!ssISO) return 'night';
@@ -225,7 +239,9 @@ const CLIENT_JS = `
   requestAnimationFrame(function(){requestAnimationFrame(function(){document.body.classList.remove('no-transition');});});
   tickCountdowns();
   tickClock();
+  tickDate();
   setInterval(tickClock,1000);
+  setInterval(tickDate,60000);
   setInterval(tickCountdowns,3000);
   setInterval(refreshWeather,600000);
   setInterval(applyMode,60000);
@@ -307,6 +323,7 @@ export function renderHtml(departures, weather) {
 <script>window._SR=${JSON.stringify(sunrise)};window._SS=${JSON.stringify(sunset)};</script>
 <div id="topbar">
   <div id="clock">—</div>
+  <div id="date"></div>
   <div id="temp">${tempHtml}</div>
 </div>
 <table><tbody hx-get="/api/rows" hx-trigger="every 15s" hx-swap="innerHTML">${buildRows(departures)}</tbody></table>
