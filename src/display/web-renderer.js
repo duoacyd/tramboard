@@ -41,6 +41,11 @@ td.mins .n{font-size:54px;font-weight:700;color:#f5c87a;transition:color ${TRANS
 @keyframes urgentBreath{0%,100%{opacity:1}50%{opacity:0.2}}
 td.mins.urgent{color:#ff5050;text-shadow:0 0 12px #ff505099;animation:urgentBreath 1.5s ease-in-out infinite;transition:none}
 td.mins.urgent .n{color:#ff5050;transition:none}
+@keyframes depL{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes depR{0%,49%{opacity:0}50%,100%{opacity:1}}
+.dep-l,.dep-r{font-size:52px;font-weight:700;color:#ff3030;text-shadow:0 0 12px #ff3030,0 0 28px #ff303077;animation-duration:1s;animation-timing-function:linear;animation-iteration-count:infinite;line-height:1;vertical-align:middle}
+.dep-l{animation-name:depL}
+.dep-r{animation-name:depR}
 td.time{color:#fff;text-align:right;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
 .delay{color:#ff4444;font-size:34px;margin-left:10px;transition:color ${TRANSITION}}
 @keyframes rowExit{from{transform:translateY(0);opacity:1}to{transform:translateY(-32px);opacity:0}}
@@ -104,7 +109,8 @@ const CLIENT_JS = `
       if(diffMs<min*60000){
         el.removeAttribute('data-time');
         el.classList.remove('urgent');
-        el.innerHTML='DEPARTED';
+        el.classList.add('is-departed');
+        el.innerHTML='<span class="dep-l">*</span><span class="dep-r">*</span>';
         return;
       }
       el.classList.toggle('urgent',diffMs<(min*60+30)*1000);
@@ -153,7 +159,7 @@ const CLIENT_JS = `
     var tbody=evt.detail.target;
     // only animate when there are departed rows to replace
     var hasDeparted=Array.from(tbody.querySelectorAll('td.mins')).some(function(el){
-      return el.textContent==='DEPARTED';
+      return el.classList.contains('is-departed');
     });
     if(!hasDeparted) return;
     var tmp=document.createElement('tbody');
