@@ -8,20 +8,20 @@ jobs:
   deploy:
     runs-on: self-hosted
     timeout-minutes: 15
-
-    defaults:
-      run:
-        working-directory: /home/sysadmin/brno-tram-display
+    # allowlist: only trigger a real deploy for known team members
+    # prevents fork PRs or unknown actors from running code on the home server
+    if: |
+      github.actor == 'martinszuc' ||
+      github.actor == 'ROOMMATE_1_USERNAME' ||
+      github.actor == 'ROOMMATE_2_USERNAME'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Pull latest code
-        run: git pull origin main
-
       - name: Rebuild and redeploy
-        run: ./scripts/sudo-rebuild.sh -y
+        working-directory: ${{ github.workspace }}
+        run: ./scripts/deploy.sh
 
       - name: Verify container is running
         run: |
