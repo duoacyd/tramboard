@@ -13,14 +13,4 @@ services:
       DEPARTURES_WINDOW_MINUTES: 90
       GTFS_REFRESH_INTERVAL_MS: 86400000
 
-      # direction filters use headsign substring match — case/accent-insensitive
-      # line filter uses routeShortName exact match (string)
-      STOPS: |
-        [
-          { "stopId": "U1398Z2", "name": "Mostecká",    "direction": "", "minMinutes": 2, "logo": "City-icon.png"},
-          { "stopId": "U1782Z2", "name": "Zdráhalova",  "direction": "", "minMinutes": 2, "logo": "City-icon.png"},
-          { "stopId": "U1782Z1", "name": "Zdráhalova",  "direction": "", "minMinutes": 2, "lines": ["5"], "logo": "Albert_logo.svg.png" },
-          { "stopId": "U1667Z2", "name": "Tomanova",    "direction": "", "minMinutes": 3, "logo": "City-icon.png" },
-          { "stopId": "U1667Z1", "name": "Tomanova",    "direction": "", "minMinutes": 3, "lines": ["9"], "logo": "Lidl-Logo.svg.png" },
-          { "stopId": "U1211Z8", "name": "Jugoslávská", "direction": "", "minMinutes": 2, "lines": ["3"], "logo": "City-icon.png" }
-        ]
+      # Stop config lives in src/config/stops.js — edit there, not here
