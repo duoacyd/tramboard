@@ -96,7 +96,7 @@ echo ""
 echo "Runner service status:"
 sudo ./svc.sh status || true
 echo ""
-echo "Reminder: scripts/sudo-rebuild.sh uses plain 'docker' (no sudo)."
+echo "Reminder: scripts/rebuild.sh uses plain 'docker' (no sudo)."
 echo "If the runner user is not yet in the docker group, restart the service"
 echo "after running 'newgrp docker' or logging out and back in."
 

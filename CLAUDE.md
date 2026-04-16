@@ -51,7 +51,7 @@ No test suite — verify with the smoke test in CI (`node --check`) and manual t
 ## CI/CD
 
 - **ci.yml**: syntax check + ESM import smoke test on every push/PR
-- **deploy.yml**: self-hosted runner auto-deploys on push to `main` via `scripts/sudo-rebuild.sh -y`
+- **deploy.yml**: self-hosted runner auto-deploys on push to `main` via `scripts/rebuild.sh -y`
 - Runner runs on the production server as `sysadmin` user, working dir `/home/sysadmin/brno-tram-display`
 
 ## Stop configuration
@@ -76,8 +76,8 @@ docker compose logs -f
 docker compose down
 
 # Production redeploy
-./scripts/sudo-rebuild.sh -y
-./scripts/sudo-rebuild.sh --no-cache -y
+./scripts/rebuild.sh -y
+./scripts/rebuild.sh --no-cache -y
 
 # Debug verbose trip logging
 DEBUG=1 npm start

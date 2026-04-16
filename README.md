@@ -55,7 +55,7 @@ src/
     └── time.js             # Prague timezone, GTFS overflow time handling
 res/                        # static logo images served by web display
 scripts/
-├── sudo-rebuild.sh         # production redeploy script
+├── rebuild.sh         # production redeploy script
 └── setup-runner.sh         # GitHub Actions self-hosted runner setup
 ```
 
@@ -105,8 +105,8 @@ The project ships with a self-hosted GitHub Actions runner that auto-deploys on 
 
 Manual redeploy:
 ```bash
-./scripts/sudo-rebuild.sh -y            # rebuild and restart
-./scripts/sudo-rebuild.sh --no-cache -y # force full image rebuild
+./scripts/rebuild.sh -y            # rebuild and restart
+./scripts/rebuild.sh --no-cache -y # force full image rebuild
 ```
 
 The script stops the container, rebuilds the image, restarts, and cleans up dangling images.
