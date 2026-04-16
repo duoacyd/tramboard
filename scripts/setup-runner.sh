@@ -21,7 +21,7 @@ echo "     (replace OWNER/REPO with your actual repository path)"
 echo "  2. GitHub will show a token under 'Configure' — copy it."
 echo ""
 
-read -rp "Enter your GitHub repository URL (e.g. https://github.com/mszuc/brno-tram-display): " REPO_URL
+read -rp "Enter your GitHub repository URL (e.g. https://github.com/duoacyd/tramboard): " REPO_URL
 read -rp "Enter the runner registration token: " RUNNER_TOKEN
 echo ""
 

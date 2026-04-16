@@ -53,6 +53,7 @@ No test suite — verify with the smoke test in CI (`node --check`) and manual t
 - **ci.yml**: syntax check + ESM import smoke test on every push/PR
 - **deploy.yml**: self-hosted runner auto-deploys on push to `main` via `scripts/rebuild.sh -y`
 - Runner runs on the production server as `sysadmin` user, working dir `/home/sysadmin/brno-tram-display`
+- Repo: `https://github.com/duoacyd/tramboard`
 
 ## Stop configuration
 
