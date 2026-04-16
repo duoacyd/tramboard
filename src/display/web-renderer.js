@@ -31,7 +31,7 @@ body{background:#0d0d0d;color:#c8c8c8;font-family:monospace;font-size:58px;paddi
 body.no-transition,body.no-transition *{transition:none!important}
 #topbar{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px}
 #clock{font-size:56px;font-weight:700;color:#fff;letter-spacing:0.04em;transition:color ${TRANSITION}}
-#date{font-size:44px;font-weight:700;color:#aaa;letter-spacing:0.03em;text-decoration:underline;text-underline-offset:6px;transition:color ${TRANSITION}}
+#date{font-size:44px;font-weight:700;color:#aaa;letter-spacing:0.03em;text-decoration:underline;text-underline-offset:6px;white-space:nowrap;transition:color ${TRANSITION}}
 #temp{font-size:48px;color:#7ecfff;transition:color ${TRANSITION}}
 table{width:100%;border-collapse:collapse}
 td{padding:24px 0;border-bottom:1px solid #1a1a1a;vertical-align:middle;transition:border-bottom-color ${TRANSITION}}
