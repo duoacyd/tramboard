@@ -1,0 +1,36 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: /home/sysadmin/brno-tram-display
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Pull latest code
+        run: git pull origin main
+
+      - name: Rebuild and redeploy
+        run: ./scripts/sudo-rebuild.sh -y
+
+      - name: Verify container is running
+        run: |
+          docker ps --filter name=tram-display
+          echo "--- last 20 log lines ---"
+          docker logs brno-tram-display-tram-display-1 --tail 20
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker logs brno-tram-display-tram-display-1 --tail 50 || true
+
+# Assisted-by: Claude (Anthropic)

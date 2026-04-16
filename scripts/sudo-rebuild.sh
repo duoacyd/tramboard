@@ -1,7 +1,9 @@
 #!/bin/bash
-# Rebuild Brno Tram Display with Cleanup - with sudo
-# Safely rebuilds the image and cleans up old versions
+# Rebuild Brno Tram Display with Cleanup
+# Safely rebuilds the image and cleans up old versions.
+# Requires the current user to be in the docker group (no sudo needed).
 # Usage: ./sudo-rebuild.sh [--no-cache] [-y|--yes]
+set -euo pipefail
 
 # Parse flags
 NO_CACHE_FLAG=""
@@ -29,7 +31,7 @@ SERVICE_NAME="tram-display"
 CONTAINER_NAME="brno-tram-display-tram-display-1"
 
 # Check if container is running
-CONTAINER_RUNNING=$(sudo docker ps -q -f name=$SERVICE_NAME)
+CONTAINER_RUNNING=$(docker ps -q -f name=$SERVICE_NAME)
 
 if [ ! -z "$CONTAINER_RUNNING" ]; then
     echo "✓ Container is currently running"
@@ -46,11 +48,11 @@ echo ""
 
 # Show current image(s)
 echo "Current image(s):"
-sudo docker images | grep brno-tram-display
+docker images | grep brno-tram-display
 echo ""
 
 # Count dangling images
-DANGLING_COUNT=$(sudo docker images -f "dangling=true" -q | wc -l)
+DANGLING_COUNT=$(docker images -f "dangling=true" -q | wc -l)
 echo "Dangling images: $DANGLING_COUNT"
 echo ""
 
@@ -86,17 +88,17 @@ echo ""
 
 # Step 2: Stop container
 echo "Step 2: Stopping container..."
-sudo docker compose down
+docker compose down
 echo ""
 
 # Step 3: Remove old container
 echo "Step 3: Removing old container..."
-sudo docker rm "$CONTAINER_NAME" 2>/dev/null || echo "  (already removed)"
+docker rm "$CONTAINER_NAME" 2>/dev/null || echo "  (already removed)"
 echo ""
 
 # Step 4: Remove old images
 echo "Step 4: Removing old images..."
-sudo docker images | grep brno-tram-display | awk '{print $3}' | xargs -r sudo docker rmi -f 2>/dev/null || echo "  (no old images)"
+docker images | grep brno-tram-display | awk '{print $3}' | xargs -r docker rmi -f 2>/dev/null || echo "  (no old images)"
 echo ""
 
 # Step 5: Build
@@ -104,39 +106,39 @@ if [[ -z "$NO_CACHE_FLAG" ]]; then
     echo "Step 5: Building image (using cached dependencies)..."
     export DOCKER_BUILDKIT=1
     export COMPOSE_DOCKER_CLI_BUILD=1
-    sudo docker compose build
+    docker compose build
 else
     echo "Step 5: Building image (NO cache - fresh download)..."
-    sudo docker compose build --no-cache
+    docker compose build --no-cache
 fi
 echo ""
 
 # Step 6: Start
 echo "Step 6: Starting container..."
-sudo docker compose up -d
+docker compose up -d
 echo ""
 
 # Step 7: Cleanup
 echo "Step 7: Cleaning up dangling images..."
-sudo docker image prune -f
+docker image prune -f
 echo ""
 
 echo "Step 8: General cleanup..."
-sudo docker container prune -f
-sudo docker network prune -f
+docker container prune -f
+docker network prune -f
 echo ""
 
 echo "=== Rebuild Complete ==="
 echo ""
 
 echo "Container status:"
-sudo docker ps | grep "$SERVICE_NAME"
+docker ps | grep "$SERVICE_NAME"
 echo ""
 
 echo "New image:"
-sudo docker images | grep brno-tram-display
+docker images | grep brno-tram-display
 echo ""
 
 echo "Checking logs (last 20 lines)..."
 sleep 3
-sudo docker logs "$CONTAINER_NAME" --tail 20
+docker logs "$CONTAINER_NAME" --tail 20
