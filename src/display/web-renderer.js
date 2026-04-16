@@ -127,11 +127,13 @@ const CLIENT_JS = `
   }
   function tickDate(){
     var d=new Date();
-    var parts=new Intl.DateTimeFormat('sk-SK',{weekday:'long',day:'numeric',month:'numeric',timeZone:'Europe/Prague'}).formatToParts(d);
+    var days=['Nedeľa','Pondelok','Utorok','Streda','Štvrtok','Piatok','Sobota'];
+    var enDays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var parts=new Intl.DateTimeFormat('sk-SK',{day:'numeric',month:'numeric',timeZone:'Europe/Prague'}).formatToParts(d);
     var map={};
     parts.forEach(function(p){map[p.type]=p.value;});
-    var wd=map.weekday||'';
-    wd=wd.charAt(0).toUpperCase()+wd.slice(1).replace(/\.$/,'');
+    var dow=enDays.indexOf(new Intl.DateTimeFormat('en-US',{weekday:'short',timeZone:'Europe/Prague'}).format(d));
+    var wd=dow>=0?days[dow]:'';
     var el=document.getElementById('date');
     if(el) el.textContent=wd+' '+map.day+'.'+map.month+'.';
   }
