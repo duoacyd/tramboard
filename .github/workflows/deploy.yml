@@ -12,8 +12,8 @@ jobs:
     # prevents fork PRs or unknown actors from running code on the home server
     if: |
       github.actor == 'martinszuc' ||
-      github.actor == 'ROOMMATE_1_USERNAME' ||
-      github.actor == 'ROOMMATE_2_USERNAME'
+      github.actor == 'denyzzko' ||
+      github.actor == 'youruncle1'
 
     steps:
       - name: Checkout
