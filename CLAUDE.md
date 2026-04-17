@@ -35,7 +35,7 @@ Data flow: GTFS cache → scheduled times → merge realtime delays → filter b
 - **No new dependencies** unless absolutely necessary — this project deliberately stays minimal
 - Prague timezone (`Europe/Prague`) for all time handling — use helpers in `src/utils/time.js`
 - Accent-insensitive string matching via `src/utils/string.js` (`normalizeForSearch`)
-- Environment config lives in `.env` (gitignored); `.env.example` is the template
+
 - Static files served from `res/` must be on the explicit allowlist in `web.js` — never serve arbitrary paths
 
 ## Running locally

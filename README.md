@@ -97,7 +97,6 @@ STOPS: |
 | `STOPS` | (from config) | JSON array of stop objects, overrides `stops.js` |
 | `DEBUG` | unset | Set to `1` for verbose per-trip logging |
 
-Copy `.env.example` to `.env` for local configuration.
 
 ## Deploy
 
