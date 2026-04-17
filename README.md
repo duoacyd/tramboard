@@ -1,5 +1,7 @@
 # Brno Tram Display
 
+![Brno Tram Display](res/screenshot.png)
+
 Real-time departure board for Brno trams — terminal and web. Uses free Czech open data, no API keys required.
 
 **Data sources:**
