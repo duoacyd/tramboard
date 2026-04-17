@@ -110,3 +110,5 @@ Manual redeploy:
 ```
 
 The script stops the container, rebuilds the image, restarts, and cleans up dangling images.
+
+test: commit
