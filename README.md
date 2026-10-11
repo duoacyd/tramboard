@@ -128,10 +128,12 @@ The script stops the container, rebuilds the image, restarts, and cleans up dang
 
 The port mapping in `docker-compose.yml` must always carry an explicit host IP. A bare `3001:3000` makes Docker listen on IPv6 as well, and Docker ignores host firewall rules, so on a network with a public IPv6 prefix the board can be reachable from the internet. The default `0.0.0.0` binds IPv4 only on every interface. Check with `ss -ltn | grep 3001`: there should be a `0.0.0.0:3001` line and no `[::]:3001`.
 
-To restrict further, set `BIND_IP=<lan address>` in `.env`. The catch: if Docker starts at boot before that address is assigned, the container fails with `cannot assign requested address` and is **not** retried, even with `restart: unless-stopped`. To avoid that, give the server a static address and make Docker wait for the network:
+To restrict further, set `BIND_IP=<lan address>` in `.env`. The catch: if Docker starts at boot before that address is assigned, the container fails with `cannot assign requested address` and is **not** retried, even with `restart: unless-stopped`. To avoid that, give the server a static address and make Docker wait for the network. Edit the Docker unit (`docker.service`, or `snap.docker.dockerd.service` for the snap install; `systemctl list-units | grep -i docker` shows which) with `sudo systemctl edit <unit>` and add:
 
-```bash
-sudo systemctl edit docker   # add: [Unit] / After=network-online.target / Wants=network-online.target
+```ini
+[Unit]
+After=network-online.target
+Wants=network-online.target
 ```
 
 If the board is down after a reboot, `docker inspect brno-tram-display --format '{{.State.Error}}'` shows whether this was the cause; `docker compose up -d` brings it back.
