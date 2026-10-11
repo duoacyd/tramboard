@@ -71,7 +71,7 @@ td.mins.urgent .n{color:#ff5050;transition:none}
 .dep-l{animation-name:depL}
 .dep-r{animation-name:depR}
 td.time{color:#aaa;text-align:right;white-space:nowrap;width:160px;transition:color ${TRANSITION}}
-.delay{color:#ff4444;font-size:34px;margin-left:10px;transition:color ${TRANSITION}}
+.late{display:inline-block;margin-left:14px;padding:2px 14px 4px;border-radius:999px;background:#e02424;color:#fff;font-size:34px;font-weight:700;vertical-align:middle;position:relative;top:-7px;line-height:1.1;text-shadow:none}
 @keyframes rowExit{from{transform:translateY(0);opacity:1}to{transform:translateY(-32px);opacity:0}}
 @keyframes rowFlipOut{from{transform:scaleY(1);opacity:1}to{transform:scaleY(0);opacity:0}}
 @keyframes rowFlipIn{from{transform:scaleY(0);opacity:0}to{transform:scaleY(1);opacity:1}}
@@ -93,7 +93,6 @@ body.day td.stop{color:#555}
 body.day td.mins{color:#c05000}
 body.day td.mins .n{color:#b06000}
 body.day td.time{color:#555}
-body.day .delay{color:#c05000}
 body.sunrise{background-color:#fde8c8;color:#3d1a00}
 body.sunrise #clock{color:#2d0e00}
 body.sunrise #date{color:#2d0e00}
@@ -105,7 +104,6 @@ body.sunrise td.stop{color:#8b4820}
 body.sunrise td.mins{color:#d4800a}
 body.sunrise td.mins .n{color:#c06800}
 body.sunrise td.time{color:#8b4820}
-body.sunrise .delay{color:#d4800a}
 body.sunset{background-color:#c04820;color:#ffe8d0}
 body.sunset #clock{color:#fff}
 body.sunset #date{color:#fff}
@@ -117,7 +115,7 @@ body.sunset td.stop{color:#ffccaa}
 body.sunset td.mins{color:#ffb060}
 body.sunset td.mins .n{color:#ffd080}
 body.sunset td.time{color:#ffccaa}
-body.sunset .delay{color:#ffb060}
+body.sunset .late{background:#e01818;box-shadow:0 0 0 3px #ffe8d0}
 body.night .city-logo,body.sunset .city-logo{filter:invert(1)}
 `;
 
@@ -147,7 +145,7 @@ const CLIENT_JS = `
         return;
       }
       el.classList.toggle('urgent',diffMs<(min*60+30)*1000);
-      el.innerHTML=fmt(diffMin);
+      el.innerHTML=fmt(diffMin)+(el.dataset.delay?'<span class="late">+'+el.dataset.delay+'</span>':'');
     });
   }
   function tickClock(){
@@ -245,7 +243,10 @@ const CLIENT_JS = `
           tr.style.animationDelay='';
           var om=tr.querySelector('.mins'),nm=newTr.querySelector('.mins');
           var ot=tr.querySelector('.time'),nt=newTr.querySelector('.time');
-          if(om&&nm)om.dataset.time=nm.dataset.time;
+          if(om&&nm){
+            om.dataset.time=nm.dataset.time;
+            if(nm.dataset.delay)om.dataset.delay=nm.dataset.delay;else delete om.dataset.delay;
+          }
           if(ot&&nt)ot.innerHTML=nt.innerHTML;
           tr.dataset.min=newTr.dataset.min;
         }else{
@@ -304,24 +305,24 @@ function computeMode(sunrise, sunset) {
 function buildRow(d) {
   const iso = d.time.toISOString();
   const delayMins = d.isRealtime ? Math.round(d.delaySeconds / 60) : 0;
-  const delayBadge = delayMins > 0 ? `<span class="delay">+${delayMins}m</span>` : "";
+  const delayAttr = delayMins > 0 ? ` data-delay="${delayMins}"` : "";
   const logoInner = d.stopLogo
     ? `<img src="/res/${htmlEscape(d.stopLogo)}" alt=""${d.stopLogo === "City-icon.png" ? ' class="city-logo"' : ''}>`
     : "";
   const logoHtml = `<span class="logo-box">${logoInner}</span>`;
   const key = d.tripId ? htmlEscape(d.tripId) : `${htmlEscape(d.routeShortName)}-${iso}`;
-  return { iso, key, delayBadge, logoHtml };
+  return { iso, key, delayAttr, logoHtml };
 }
 
 /** Initial page render — no animation classes. */
 function buildRows(departures) {
   return departures.map((d) => {
-    const { iso, key, delayBadge, logoHtml } = buildRow(d);
+    const { iso, key, delayAttr, logoHtml } = buildRow(d);
     return `<tr data-key="${key}" data-min="${d.minMinutes ?? 1}">
   <td class="line">${htmlEscape(d.routeShortName)}</td>
   <td class="stop">${logoHtml}${htmlEscape(d.stopName)}</td>
-  <td class="mins" data-time="${iso}">—</td>
-  <td class="time">${formatTime(d.scheduledTime ?? d.time)}${delayBadge}</td>
+  <td class="mins" data-time="${iso}"${delayAttr}>—</td>
+  <td class="time">${formatTime(d.scheduledTime ?? d.time)}</td>
 </tr>`;
   }).join("");
 }
@@ -329,12 +330,12 @@ function buildRows(departures) {
 /** HTMX fragment — new rows get enter animation; existing rows are identified by data-key. */
 export function renderRows(departures) {
   return departures.map((d) => {
-    const { iso, key, delayBadge, logoHtml } = buildRow(d);
+    const { iso, key, delayAttr, logoHtml } = buildRow(d);
     return `<tr class="enter" data-key="${key}" data-min="${d.minMinutes ?? 1}">
   <td class="line">${htmlEscape(d.routeShortName)}</td>
   <td class="stop">${logoHtml}${htmlEscape(d.stopName)}</td>
-  <td class="mins" data-time="${iso}">—</td>
-  <td class="time">${formatTime(d.scheduledTime ?? d.time)}${delayBadge}</td>
+  <td class="mins" data-time="${iso}"${delayAttr}>—</td>
+  <td class="time">${formatTime(d.scheduledTime ?? d.time)}</td>
 </tr>`;
   }).join("");
 }
