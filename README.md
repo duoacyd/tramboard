@@ -19,7 +19,7 @@ docker compose up --build
 npm install && npm start
 ```
 
-Web interface available at `http://localhost:3000` when running in `web` or `both` mode.
+Web interface available at `http://localhost:3000` when running in `web` or `both` mode. With Docker it is published on host port `3001`.
 
 ## Display modes
 
@@ -87,6 +87,12 @@ Edit `src/config/stops.js` directly:
 | `STOPS` | (from config) | JSON array of stop objects, overrides `stops.js` |
 | `DEBUG` | unset | Set to `1` for verbose per-trip logging |
 
+Docker-only (read from a `.env` file next to `docker-compose.yml`, see `.env.example`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BIND_IP` | `0.0.0.0` | Host address the board is published on |
+
 ## Preview mode (testing display states)
 
 The web display accepts query params on `/` to force a visual state without waiting for real conditions — useful for checking day/night theming or weather icons after a CSS change.
@@ -117,3 +123,15 @@ Manual redeploy:
 ```
 
 The script stops the container, rebuilds the image, restarts, and cleans up dangling images.
+
+### Binding to a LAN address
+
+The port mapping in `docker-compose.yml` must always carry an explicit host IP. A bare `3001:3000` makes Docker listen on IPv6 as well, and Docker ignores host firewall rules, so on a network with a public IPv6 prefix the board can be reachable from the internet. The default `0.0.0.0` binds IPv4 only on every interface. Check with `ss -ltn | grep 3001`: there should be a `0.0.0.0:3001` line and no `[::]:3001`.
+
+To restrict further, set `BIND_IP=<lan address>` in `.env`. The catch: if Docker starts at boot before that address is assigned, the container fails with `cannot assign requested address` and is **not** retried, even with `restart: unless-stopped`. To avoid that, give the server a static address and make Docker wait for the network:
+
+```bash
+sudo systemctl edit docker   # add: [Unit] / After=network-online.target / Wants=network-online.target
+```
+
+If the board is down after a reboot, `docker inspect brno-tram-display --format '{{.State.Error}}'` shows whether this was the cause; `docker compose up -d` brings it back.

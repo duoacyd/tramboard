@@ -4,7 +4,10 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "${BIND_IP:-127.0.0.1}:3001:3000"
+      # Always give an explicit host IP: a bare "3001:3000" also listens on IPv6 ([::]),
+      # which can expose the board to the internet. 0.0.0.0 = IPv4 only, any interface.
+      # BIND_IP (in .env next to this file) can narrow it to one address.
+      - "${BIND_IP:-0.0.0.0}:3001:3000"
     environment:
       DISPLAY_MODE: web
       # Set DEBUG=1 to enable verbose per-trip logging

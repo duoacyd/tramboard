@@ -55,6 +55,10 @@ No test suite — verify with the smoke test in CI (`node --check`) and manual t
 - Runner runs on the production server as `sysadmin` user, working dir `/home/sysadmin/brno-tram-display`
 - Repo: `https://github.com/duoacyd/tramboard`
 
+## Docker port binding
+
+`docker-compose.yml` publishes `${BIND_IP:-0.0.0.0}:3001:3000`. Keep the explicit IP: a bare `3001:3000` also listens on IPv6 and can be reachable from the internet. `BIND_IP` comes from a gitignored `.env` on the server (see `.env.example`). Binding to a specific LAN IP makes the container fail to start after a reboot if that address isn't up yet — see README "Binding to a LAN address".
+
 ## Stop configuration
 
 Stops are defined in `src/config/stops.js` or overridden via `STOPS` env var (JSON array). Each stop object:
