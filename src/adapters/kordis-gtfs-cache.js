@@ -131,6 +131,27 @@ function buildStopTimesByStop(stopTimes, tripsMap) {
   return byStop;
 }
 
+function buildTripStops(stopTimes, tripsMap) {
+  const byTrip = new Map();
+  for (const row of stopTimes) {
+    const tripId = row.trip_id ?? row.tripid;
+    if (!tripsMap.has(tripId)) continue;
+    const dep = row.departure_time ?? row.departuretime;
+    const arr = row.arrival_time ?? row.arrivaltime ?? dep;
+    if (!dep) continue;
+    const list = byTrip.get(tripId) ?? [];
+    list.push({
+      stopId: row.stop_id ?? row.stopid,
+      seq: parseInt(row.stop_sequence ?? row.stopsequence, 10) || 0,
+      arrivalMinutes: gtfsTimeToMinutesSinceMidnight(arr),
+      departureMinutes: gtfsTimeToMinutesSinceMidnight(dep),
+    });
+    byTrip.set(tripId, list);
+  }
+  for (const list of byTrip.values()) list.sort((a, b) => a.seq - b.seq);
+  return byTrip;
+}
+
 function buildLookups(stops, routes, trips, stopTimes, calendar) {
   const now = new Date();
   const activeServiceIds = getActiveServiceIds(calendar, now);
@@ -138,12 +159,13 @@ function buildLookups(stops, routes, trips, stopTimes, calendar) {
   const routesMap = buildRoutesMap(routes);
   const tripsMap = buildTripsMap(trips, routesMap, activeServiceIds);
   const stopTimesByStop = buildStopTimesByStop(stopTimes, tripsMap);
+  const tripStops = buildTripStops(stopTimes, tripsMap);
   console.log(
     `[gtfs] parsed: ${stopsMap.size} stops, ${routesMap.size} routes, ` +
     `${trips.length} trips (${tripsMap.size} active today), ` +
     `${stopTimes.length} stop_times → ${stopTimesByStop.size} stops with departures`
   );
-  return { stopsMap, stopTimesByStop };
+  return { stopsMap, stopTimesByStop, tripStops };
 }
 
 async function downloadAndBuildCache() {
@@ -256,10 +278,16 @@ export async function findStopsByName(name) {
   return results;
 }
 
-export function getScheduledDepartureNear(tripId, stopId, nearMs) {
-  const entry = cache?.stopTimesByStop.get(stopId)?.find((e) => e.tripId === tripId);
-  if (!entry) return null;
-  const minutes = gtfsTimeToMinutesSinceMidnight(entry.departureTime);
+export function getTripStops(tripId) {
+  return cache?.tripStops.get(tripId) ?? null;
+}
+
+export function getStopCoords(stopId) {
+  const stop = cache?.stopsMap.get(stopId);
+  return stop ? { lat: stop.lat, lon: stop.lon } : null;
+}
+
+export function dateForGtfsMinutesNear(minutes, nearMs) {
   const base = dateFromMinutesSinceMidnight(new Date(nearMs), minutes).getTime();
   // the trip may belong to the previous or next service day around midnight
   return [-ONE_DAY_MS, 0, ONE_DAY_MS]

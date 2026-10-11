@@ -9,6 +9,7 @@ export const REALTIME_RETRY_BASE_MS = 60000;
 export const REALTIME_RETRY_MAX_MS = 30 * 60000;
 export const REALTIME_MAX_AGE_MS = 180000;
 export const REALTIME_MAX_DELAY_MIN = 120;
+export const REALTIME_SMOOTHING = 0.5;
 
 export const GTFS_URL =
   "https://kordis-jmk.cz/gtfs/gtfs.zip";
