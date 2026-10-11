@@ -256,6 +256,17 @@ export async function findStopsByName(name) {
   return results;
 }
 
+export function getScheduledDepartureNear(tripId, stopId, nearMs) {
+  const entry = cache?.stopTimesByStop.get(stopId)?.find((e) => e.tripId === tripId);
+  if (!entry) return null;
+  const minutes = gtfsTimeToMinutesSinceMidnight(entry.departureTime);
+  const base = dateFromMinutesSinceMidnight(new Date(nearMs), minutes).getTime();
+  // the trip may belong to the previous or next service day around midnight
+  return [-ONE_DAY_MS, 0, ONE_DAY_MS]
+    .map((offset) => new Date(base + offset))
+    .reduce((best, d) => (Math.abs(d - nearMs) < Math.abs(best - nearMs) ? d : best));
+}
+
 export function setRefreshIntervalMs(ms) {
   refreshIntervalMs = ms;
 }

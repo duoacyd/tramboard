@@ -7,20 +7,16 @@ import {
   findStopsByName,
   setRefreshIntervalMs,
 } from "./kordis-gtfs-cache.js";
-import { getDelaysByLine } from "./kordis-realtime.js";
+import { getDelaysByTrip } from "./kordis-realtime.js";
 import { DEFAULT_WINDOW_MINUTES } from "../config/constants.js";
 
 let configuredWindowMinutes = DEFAULT_WINDOW_MINUTES;
 
-function toLineKey(routeShortName) {
-  return String(routeShortName ?? "").replace(/^L/i, "") || routeShortName;
-}
-
 const DEBUG = !!process.env.DEBUG;
 
-function mergeWithRealtime(trips, delaysByLine) {
+function mergeWithRealtime(trips, delaysByTrip) {
   return trips.map((t) => {
-    const delayMinutes = delaysByLine.get(toLineKey(t.routeShortName));
+    const delayMinutes = delaysByTrip.get(t.tripId);
     const hasRealtime = delayMinutes != null && !Number.isNaN(delayMinutes);
     const time = new Date(t.scheduledDeparture);
     if (hasRealtime) time.setMinutes(time.getMinutes() + delayMinutes);
@@ -48,13 +44,13 @@ function mergeWithRealtime(trips, delaysByLine) {
 export async function fetchDepartures(stopId, _query, options = {}) {
   const windowMinutes = options.windowMinutes ?? configuredWindowMinutes;
   const trips = await getUpcomingTripsForStop(stopId, windowMinutes);
-  let delaysByLine = new Map();
+  let delaysByTrip = new Map();
   try {
-    delaysByLine = await getDelaysByLine();
+    delaysByTrip = await getDelaysByTrip();
   } catch (err) {
     console.warn("kordis realtime fetch failed, using schedule only:", err.message);
   }
-  return mergeWithRealtime(trips, delaysByLine);
+  return mergeWithRealtime(trips, delaysByTrip);
 }
 
 export async function searchStops(name) {

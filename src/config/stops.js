@@ -2,10 +2,9 @@
  * Stop configuration. Uses GTFS stop_id from KORDIS (U prefix convention).
  */
 
-import { GTFS_URL, VEHICLE_POSITIONS_BASE } from "./constants.js";
+import { GTFS_URL, VEHICLE_POSITIONS_URL } from "./constants.js";
 
-export { GTFS_URL, VEHICLE_POSITIONS_BASE };
-export { VEHICLE_POSITIONS_BASE as VEHICLE_POSITIONS_URL };
+export { GTFS_URL, VEHICLE_POSITIONS_URL };
 
 export const STOPS = [
   { stopId: "U1398Z2", name: "Mostecká",    direction: "", minMinutes: 2, logo: "City-icon.png" },

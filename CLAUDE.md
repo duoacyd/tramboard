@@ -4,7 +4,7 @@ Project context and conventions for Claude Code working in this repo.
 
 ## What this project is
 
-Real-time tram departure board for Brno, Czech Republic. Pulls GTFS schedule data from KORDIS and live vehicle positions from Brno's ArcGIS FeatureServer. No database — everything is in-memory. No build step — pure ES6 modules.
+Real-time tram departure board for Brno, Czech Republic. Pulls GTFS schedule data and the GTFS-Realtime vehicle-positions feed from KORDIS. No database — everything is in-memory. No build step — pure ES6 modules.
 
 Deployed on a self-hosted Linux server, running as a Docker container, auto-deployed via GitHub Actions on push to `main`.
 
@@ -21,7 +21,7 @@ Deployed on a self-hosted Linux server, running as a Docker container, auto-depl
 index.js          polling loop (POLL_INTERVAL_MS, default 30s)
   └─ kordis.js    fetchDepartures() — merges GTFS + realtime delays
        ├─ kordis-gtfs-cache.js   in-memory GTFS (stops, routes, trips, calendar, stop_times)
-       └─ kordis-realtime.js     ArcGIS vehicle positions, cached 10s
+       └─ kordis-realtime.js     GTFS-RT vehicle positions → per-trip delay, cached 30s
   └─ openmeteo.js  weather, cached 10min
   └─ display/     terminal.js | web.js + web-data.js + web-renderer.js
 ```

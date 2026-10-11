@@ -6,7 +6,7 @@ Real-time departure board for Brno trams — terminal and web. Uses free Czech o
 
 **Data sources:**
 - **Schedules**: [KORDIS GTFS](https://kordis-jmk.cz/gtfs/gtfs.zip) — re-fetched every 24h, CC BY 4.0
-- **Live positions**: [Brno ArcGIS FeatureServer](https://gis.brno.cz/ags1/rest/services/Hosted/ODAE_public_transit_positional_feature_service/FeatureServer/0) — polled every 10s, CC BY 4.0
+- **Live positions**: [KORDIS GTFS-Realtime](https://kordis-jmk.cz/gtfs/gtfsReal.dat) vehicle positions (CC BY 4.0), polled every 30s. The feed has no delay field, so delay is derived per trip by comparing each vehicle's last report with the scheduled time at its next stop.
 - **Weather**: [Open-Meteo](https://open-meteo.com/) — temperature, sunrise/sunset for web theme switching
 
 ## Quick start
@@ -41,7 +41,7 @@ src/
 ├── adapters/
 │   ├── kordis.js           # public API: fetchDepartures, searchStops
 │   ├── kordis-gtfs-cache.js    # GTFS zip download, parse, in-memory cache
-│   ├── kordis-realtime.js      # live vehicle positions & delay extraction
+│   ├── kordis-realtime.js      # GTFS-RT vehicle positions → per-trip delay
 │   └── openmeteo.js            # weather fetch (temperature, sunrise/sunset)
 ├── config/
 │   ├── constants.js        # URLs, timeouts, magic numbers

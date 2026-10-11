@@ -5,16 +5,17 @@
 export const ONE_DAY_MS = 86400000;
 export const ONE_HOUR_MS = 3600000;
 export const CACHE_TTL_REALTIME_MS = 30000;
+export const REALTIME_RETRY_BASE_MS = 60000;
+export const REALTIME_RETRY_MAX_MS = 30 * 60000;
+export const REALTIME_MAX_AGE_MS = 180000;
+export const REALTIME_MAX_DELAY_MIN = 120;
 
 export const GTFS_URL =
   "https://kordis-jmk.cz/gtfs/gtfs.zip";
-export const VEHICLE_POSITIONS_BASE =
-  "https://gis.brno.cz/ags1/rest/services/Hosted/ODAE_public_transit_positional_feature_service/FeatureServer/0";
-export const VEHICLE_POSITIONS_QUERY_URL = `${VEHICLE_POSITIONS_BASE}/query`;
+export const VEHICLE_POSITIONS_URL = "https://kordis-jmk.cz/gtfs/gtfsReal.dat";
 
 // route types to include: 0 = tram, 3 = bus
 export const GTFS_INCLUDED_ROUTE_TYPES = new Set(["0", "3"]);
-export const VTYPE_TRAM = 1;
 
 // kordis uses U prefix for stop_id (e.g. U123) per their gtfs convention
 export const STOP_ID_PREFIX = "U";
