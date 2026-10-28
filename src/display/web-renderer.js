@@ -39,6 +39,7 @@ const CSS = `
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0d0d0d;color:#c8c8c8;font-family:'Comic Neue','Comic Sans MS',cursive;font-size:58px;font-weight:700;padding:32px;transition:background-color ${TRANSITION},color ${TRANSITION}}
 body.no-transition,body.no-transition *{transition:none!important}
+body.quick-fade,body.quick-fade *{transition-duration:4s!important}
 #topbar{display:grid;grid-template-columns:1fr auto auto;column-gap:28px;align-items:flex-end;margin-bottom:16px;background:rgba(185,157,255,0.04);border-radius:28px;padding:4px 32px}
 #date-block{display:flex;flex-direction:column;align-items:center}
 #date{text-align:center;white-space:nowrap}
@@ -180,9 +181,14 @@ const CLIENT_JS = `
     if(now>=new Date(ss-H)&&now<new Date(ss+H)) return 'sunset';
     return 'night';
   }
+  var MODES=['night','day','sunrise','sunset'],DARK={night:true,sunset:true};
   function applyMode(){
     var mode=getMode(),b=document.body;
     if(!b.classList.contains(mode)){
+      var prev=MODES.filter(function(m){return b.classList.contains(m);})[0];
+      // a slow fade between a dark and a light palette passes through a point where
+      // text and background are the same colour, so those switches fade quickly
+      b.classList.toggle('quick-fade',!!DARK[prev]!==!!DARK[mode]);
       b.classList.remove('night','day','sunrise','sunset');
       b.classList.add(mode);
     }
