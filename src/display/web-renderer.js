@@ -40,7 +40,10 @@ const CSS = `
 body{background:#0d0d0d;color:#c8c8c8;font-family:'Comic Neue','Comic Sans MS',cursive;font-size:58px;font-weight:700;padding:32px;transition:background-color ${TRANSITION},color ${TRANSITION}}
 body.no-transition,body.no-transition *{transition:none!important}
 #topbar{display:grid;grid-template-columns:1fr auto auto;column-gap:28px;align-items:flex-end;margin-bottom:16px;background:rgba(185,157,255,0.04);border-radius:28px;padding:4px 32px}
+#date-block{display:flex;flex-direction:column;align-items:center}
 #date{text-align:center;white-space:nowrap}
+#holiday{font-size:20px;color:#aaa;opacity:0.7;text-align:center;line-height:1.15;width:0;min-width:100%;transition:color ${TRANSITION}}
+#holiday:empty{display:none}
 #temp-block{justify-self:end}
 #clock-block{display:flex;align-items:center;gap:0.4em;min-width:0}
 #clock{font-size:56px;font-weight:700;color:#fff;letter-spacing:0.04em;flex-shrink:0;transition:color ${TRANSITION}}
@@ -82,9 +85,9 @@ tr.pre-flip{transform:scaleY(0);opacity:0;transform-origin:center}
 body.day{background-color:#f0ede8;color:#2a2a2a}
 body.day #clock{color:#111}
 body.day #date{color:#111}
-body.day #nameday{color:#444;opacity:1}
-body.sunrise #nameday{color:#6b2e08;opacity:0.85}
-body.sunset #nameday{color:#f0c898;opacity:0.85}
+body.day #nameday,body.day #holiday{color:#444;opacity:1}
+body.sunrise #nameday,body.sunrise #holiday{color:#6b2e08;opacity:0.85}
+body.sunset #nameday,body.sunset #holiday{color:#f0c898;opacity:0.85}
 body.day #temp{color:#004f7a}
 body.day #temp-apparent{color:#004f7a;opacity:1}
 body.day td{border-bottom-color:#d8d4d0}
@@ -117,6 +120,11 @@ body.sunset td.mins .n{color:#ffd080}
 body.sunset td.time{color:#ffccaa}
 body.sunset .late{background:#e01818;box-shadow:0 0 0 3px #ffe8d0}
 body.night .city-logo,body.sunset .city-logo{filter:invert(1)}
+@media (max-width:960px){
+#topbar{grid-template-columns:auto 1fr auto;row-gap:2px}
+#clock-block{display:contents}
+#nameday{grid-row:2;grid-column:1/-1;flex-direction:row;justify-content:center;column-gap:1.2em}
+}
 `;
 
 // Client JS extracted as a named constant
@@ -191,6 +199,8 @@ const CLIENT_JS = `
         if(wa) wa.innerHTML=data.weatherAlert||'';
         var nd=document.getElementById('nameday');
         if(nd&&data.namedayHtml!=null) nd.innerHTML=data.namedayHtml;
+        var hd=document.getElementById('holiday');
+        if(hd&&data.holiday!=null) hd.textContent=data.holiday;
         if(data.sunrise) srISO=data.sunrise;
         if(data.sunset)  ssISO=data.sunset;
         applyMode();
@@ -401,7 +411,10 @@ export function renderHtml(departures, weather, nameday = null, preview = null) 
     <div id="clock">—</div>
     <div id="nameday">${buildNamedayHtml(nameday)}</div>
   </div>
-  <div id="date"></div>
+  <div id="date-block">
+    <div id="date"></div>
+    <div id="holiday">${htmlEscape(nameday?.holiday ?? "")}</div>
+  </div>
   <div id="temp-block">
     <div id="weather-alert">${alertHtml}</div>
     <div id="temp"><span id="temp-value">${tempHtml}</span><span id="temp-apparent">${apparentHtml}</span></div>

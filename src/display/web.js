@@ -84,6 +84,7 @@ async function handleRequest(stops, windowMinutes, url, headers, search = "") {
       apparentCelsius: w?.apparent ?? null,
       weatherAlert:    alert ? `<span class="weather-emoji">${alert.emoji}</span><span class="weather-text">${alert.hoursAhead ? ` in ${alert.hoursAhead}h` : " now"}</span>` : null,
       namedayHtml:     nameday ? buildNamedayHtml(nameday) : null,
+      holiday:         nameday ? (nameday.holiday ?? "") : null,
       sunrise: w?.sunrise ?? null,
       sunset:  w?.sunset  ?? null,
     }) };
