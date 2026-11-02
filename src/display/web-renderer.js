@@ -15,10 +15,10 @@ function htmlEscape(s) {
 
 export function buildNamedayHtml(nameday) {
   if (!nameday) return "";
-  const lines = [];
-  if (nameday.sk) lines.push(`<div class="nameday-line"><span class="flag">🇸🇰</span><span>${htmlEscape(nameday.sk)}</span></div>`);
-  if (nameday.cz) lines.push(`<div class="nameday-line"><span class="flag">🇨🇿</span><span>${htmlEscape(nameday.cz)}</span></div>`);
-  return lines.join("");
+  // a calendar can have no name at all on a holiday (2.11.), keep its line so the layout stays put
+  return [["🇸🇰", nameday.sk], ["🇨🇿", nameday.cz]]
+    .map(([flag, names]) => `<div class="nameday-line"><span class="flag">${flag}</span><span>${htmlEscape(names ?? "—")}</span></div>`)
+    .join("");
 }
 
 function formatTime(date) {
@@ -40,7 +40,7 @@ const CSS = `
 body{background:#0d0d0d;color:#c8c8c8;font-family:'Comic Neue','Comic Sans MS',cursive;font-size:58px;font-weight:700;padding:32px;transition:background-color ${TRANSITION},color ${TRANSITION}}
 body.no-transition,body.no-transition *{transition:none!important}
 body.quick-fade,body.quick-fade *{transition-duration:4s!important}
-#topbar{display:grid;grid-template-columns:1fr auto auto;column-gap:28px;align-items:flex-end;margin-bottom:16px;background:rgba(185,157,255,0.04);border-radius:28px;padding:4px 32px}
+#topbar{display:grid;grid-template-columns:1fr auto 1fr;column-gap:28px;align-items:flex-end;margin-bottom:16px;background:rgba(185,157,255,0.04);border-radius:28px;padding:4px 32px}
 #date-block{display:flex;flex-direction:column;align-items:center}
 #date{text-align:center;white-space:nowrap}
 #holiday{font-size:20px;color:#aaa;opacity:0.7;text-align:center;line-height:1.15;width:0;min-width:100%;transition:color ${TRANSITION}}
@@ -121,8 +121,8 @@ body.sunset td.mins .n{color:#ffd080}
 body.sunset td.time{color:#ffccaa}
 body.sunset .late{background:#e01818;box-shadow:0 0 0 3px #ffe8d0}
 body.night .city-logo,body.sunset .city-logo{filter:invert(1)}
-@media (max-width:960px){
-#topbar{grid-template-columns:auto 1fr auto;row-gap:2px}
+@media (max-width:1200px){
+#topbar{row-gap:2px}
 #clock-block{display:contents}
 #nameday{grid-row:2;grid-column:1/-1;flex-direction:row;justify-content:center;column-gap:1.2em}
 }

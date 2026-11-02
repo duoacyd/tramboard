@@ -37,10 +37,10 @@ export async function getNameday() {
     if (!json?.data?.sk && !json?.data?.cz) throw new Error("unexpected nameday response shape");
     const sk = splitEntries(json.data.sk);
     const cz = splitEntries(json.data.cz);
-    // the board is in Brno, so only Czech holidays (which also switch tram timetables) are shown
-    cached = { sk: sk.names, cz: cz.names, holiday: cz.holiday };
+    // Slovak wording when both calendars mark the day; Czech-only holidays still matter in Brno
+    cached = { sk: sk.names, cz: cz.names, holiday: sk.holiday ?? cz.holiday };
     cachedDate = today;
-    console.log(`[nameday] ${today}: sk=${sk.names ?? "-"} cz=${cz.names ?? "-"} holiday=${cz.holiday ?? "-"}`);
+    console.log(`[nameday] ${today}: sk=${sk.names ?? "-"} cz=${cz.names ?? "-"} holiday=${cached.holiday ?? "-"}`);
     return cached;
   } catch (err) {
     console.warn("[nameday] fetch failed:", err.message);
