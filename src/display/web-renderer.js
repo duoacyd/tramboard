@@ -15,9 +15,9 @@ function htmlEscape(s) {
 
 export function buildNamedayHtml(nameday) {
   if (!nameday) return "";
-  // a calendar can have no name at all on a holiday (2.11.), keep its line so the layout stays put
   return [["🇸🇰", nameday.sk], ["🇨🇿", nameday.cz]]
-    .map(([flag, names]) => `<div class="nameday-line"><span class="flag">${flag}</span><span>${htmlEscape(names ?? "—")}</span></div>`)
+    .filter(([, names]) => names)
+    .map(([flag, names]) => `<div class="nameday-line"><span class="flag">${flag}</span><span>${htmlEscape(names)}</span></div>`)
     .join("");
 }
 
