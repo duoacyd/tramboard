@@ -3,7 +3,6 @@
  * derived by comparing each vehicle's last report with the scheduled time at its next stop.
  */
 
-import fetch from "node-fetch";
 import {
   VEHICLE_POSITIONS_URL,
   CACHE_TTL_REALTIME_MS,
@@ -12,6 +11,7 @@ import {
   REALTIME_MAX_AGE_MS,
   REALTIME_MAX_DELAY_MIN,
   REALTIME_SMOOTHING,
+  FETCH_TIMEOUT_MS,
 } from "../config/constants.js";
 import { readFields, firstField } from "../utils/protobuf.js";
 import { getTripStops, getStopCoords, dateForGtfsMinutesNear } from "./kordis-gtfs-cache.js";
@@ -89,7 +89,7 @@ function estimateDelayMs(vehicle, stops, idx) {
 }
 
 async function fetchTripDelays() {
-  const res = await fetch(VEHICLE_POSITIONS_URL);
+  const res = await fetch(VEHICLE_POSITIONS_URL, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!res.ok) {
     throw new Error(`vehicle positions fetch failed: ${res.status} ${res.statusText}`);
   }

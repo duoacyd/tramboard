@@ -2,7 +2,6 @@ name: CI
 
 on:
   push:
-    branches-ignore: [main]
   pull_request:
     branches: [main]
 
@@ -17,17 +16,21 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install deps
         run: npm ci
 
       - name: Syntax check
-        # --check parses without executing; catches syntax errors across all JS files
-        run: node --check src/**/*.js index.js
+        # node --check takes one file; extra arguments become script args and go unchecked
+        run: for f in index.js $(find src test -name '*.js'); do node --check "$f"; done
 
       - name: Smoke test ESM imports
-        run: node -e "import('./src/config/constants.js')"
+        # loading every module catches imports of names that no longer exist
+        run: for f in $(find src -name '*.js'); do node --input-type=module -e "await import('./$f')"; done
+
+      - name: Tests
+        run: npm test
 
 # Assisted-by: Claude (Anthropic)

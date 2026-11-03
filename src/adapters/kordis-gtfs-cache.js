@@ -3,7 +3,6 @@
  */
 
 import AdmZip from "adm-zip";
-import fetch from "node-fetch";
 import { parseCsv } from "../utils/csv.js";
 import {
   gtfsTimeToMinutesSinceMidnight,
@@ -11,26 +10,23 @@ import {
   pragueServiceDay,
 } from "../utils/time.js";
 import { normalizeForSearch } from "../utils/string.js";
+import { buildServiceCalendar, activeServiceIds, tripsInWindow } from "./gtfs-schedule.js";
 import {
   GTFS_URL,
   GTFS_INCLUDED_ROUTE_TYPES,
+  GTFS_FETCH_TIMEOUT_MS,
+  GTFS_RETRY_BASE_MS,
+  GTFS_RETRY_MAX_MS,
   ONE_DAY_MS,
+  ONE_HOUR_MS,
 } from "../config/constants.js";
 
 let cache = null;
 let lastFetchTime = 0;
 let refreshIntervalMs = ONE_DAY_MS;
 let fetchInFlight = null;
-
-const CALENDAR_DAY_COLUMNS = [
-  "sunday",
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-];
+let consecutiveFailures = 0;
+let retryNotBefore = 0;
 
 function extractAndParse(zip, filename) {
   const entry = zip.getEntry(filename) ?? zip.getEntry(`gtfs/${filename}`);
@@ -38,47 +34,6 @@ function extractAndParse(zip, filename) {
     throw new Error(`gtfs zip missing: ${filename}`);
   }
   return parseCsv(entry.getData().toString("utf8"));
-}
-
-function buildServiceCalendar(calendar, calendarDates) {
-  const weekly = [];
-  for (const row of calendar) {
-    const serviceId = row.service_id ?? row.serviceid;
-    const start = row.start_date ?? row.startdate;
-    const end = row.end_date ?? row.enddate;
-    if (!serviceId || !start || !end) continue;
-    weekly.push({ serviceId, start, end, days: CALENDAR_DAY_COLUMNS.map((col) => row[col] === "1") });
-  }
-
-  // holidays and one-off days: exception_type 1 adds a service, 2 removes it
-  const exceptions = new Map();
-  for (const row of calendarDates) {
-    const serviceId = row.service_id ?? row.serviceid;
-    const type = row.exception_type ?? row.exceptiontype;
-    if (!serviceId || !row.date) continue;
-    const day = exceptions.get(row.date) ?? { added: new Set(), removed: new Set() };
-    if (type === "1") day.added.add(serviceId);
-    if (type === "2") day.removed.add(serviceId);
-    exceptions.set(row.date, day);
-  }
-
-  return { weekly, exceptions, activeByDate: new Map() };
-}
-
-function activeServiceIds(serviceCalendar, day) {
-  const known = serviceCalendar.activeByDate.get(day.ymd);
-  if (known) return known;
-
-  const active = new Set();
-  for (const s of serviceCalendar.weekly) {
-    if (s.days[day.dayOfWeek] && day.ymd >= s.start && day.ymd <= s.end) active.add(s.serviceId);
-  }
-  const exceptions = serviceCalendar.exceptions.get(day.ymd);
-  exceptions?.added.forEach((id) => active.add(id));
-  exceptions?.removed.forEach((id) => active.delete(id));
-
-  serviceCalendar.activeByDate.set(day.ymd, active);
-  return active;
 }
 
 function buildStopsMap(stops) {
@@ -201,7 +156,7 @@ function extractOptional(zip, filename) {
 async function downloadAndBuildCache() {
   console.log(`[gtfs] downloading from ${GTFS_URL} …`);
   const t0 = Date.now();
-  const res = await fetch(GTFS_URL);
+  const res = await fetch(GTFS_URL, { signal: AbortSignal.timeout(GTFS_FETCH_TIMEOUT_MS) });
   if (!res.ok) {
     throw new Error(`gtfs download failed: ${res.status} ${res.statusText} for ${GTFS_URL}`);
   }
@@ -224,62 +179,65 @@ async function downloadAndBuildCache() {
   return cache;
 }
 
+async function refreshCache(now) {
+  try {
+    const fresh = await downloadAndBuildCache();
+    if (consecutiveFailures > 0) console.log("[gtfs] download recovered");
+    consecutiveFailures = 0;
+    retryNotBefore = 0;
+    return fresh;
+  } catch (err) {
+    consecutiveFailures++;
+    const backoffMs = Math.min(GTFS_RETRY_BASE_MS * 2 ** (consecutiveFailures - 1), GTFS_RETRY_MAX_MS);
+    retryNotBefore = now + backoffMs;
+    const retryIn = `retry in ${Math.round(backoffMs / 60000)} min`;
+    if (!cache) {
+      console.error(`[gtfs] download failed (${consecutiveFailures}x), no timetable yet, ${retryIn}: ${err.message}`);
+      throw err;
+    }
+    const ageHours = ((now - lastFetchTime) / ONE_HOUR_MS).toFixed(0);
+    console.warn(`[gtfs] refresh failed (${consecutiveFailures}x), keeping timetable from ${ageHours}h ago, ${retryIn}: ${err.message}`);
+    return cache;
+  }
+}
+
 async function ensureCache() {
   const now = Date.now();
   if (cache && now - lastFetchTime < refreshIntervalMs) {
     if (DEBUG) console.debug(`[gtfs] cache hit (age ${Math.round((now - lastFetchTime) / 60000)}min)`);
     return cache;
   }
-  if (fetchInFlight) return fetchInFlight;
+  // services are picked per day, so an old timetable stays correct until KORDIS changes it;
+  // a failed refresh must not blank the board
+  if (now < retryNotBefore) {
+    if (cache) return cache;
+    throw new Error(`timetable not loaded yet, next download attempt in ${Math.ceil((retryNotBefore - now) / 1000)}s`);
+  }
 
-  fetchInFlight = downloadAndBuildCache().finally(() => {
-    fetchInFlight = null;
-  });
-  return fetchInFlight;
+  if (!fetchInFlight) {
+    fetchInFlight = refreshCache(now).finally(() => {
+      fetchInFlight = null;
+    });
+  }
+  // with a timetable in hand, requests don't wait for the re-download
+  return cache ?? fetchInFlight;
 }
 
 const DEBUG = !!process.env.DEBUG;
 
-// lookbackMinutes keeps trips whose scheduled time has passed, so a late vehicle
-// can still be shown once its delay is applied
 export async function getUpcomingTripsForStop(stopId, windowMinutes, lookbackMinutes = 0, now = new Date()) {
   const { stopTimesByStop, serviceCalendar } = await ensureCache();
   const trips = stopTimesByStop.get(stopId);
   if (!trips?.length) return [];
 
-  const fromMs = now.getTime() - lookbackMinutes * 60000;
-  const toMs = now.getTime() + windowMinutes * 60000;
-
-  const result = [];
-  // GTFS times run past 24:00, so yesterday's service is still running after midnight
-  // and tomorrow's can start inside a window that crosses midnight
-  for (const offsetDays of [-1, 0, 1]) {
-    const day = pragueServiceDay(now, offsetDays);
-    const active = activeServiceIds(serviceCalendar, day);
-    for (const t of trips) {
-      if (!active.has(t.serviceId)) continue;
-      const scheduledMs = day.startMs + Math.round(t.departureMinutes * 60000);
-      if (scheduledMs < fromMs || scheduledMs > toMs) continue;
-
-      const dep = {
-        tripId: t.tripId,
-        stopSequence: t.stopSequence,
-        scheduledDeparture: new Date(scheduledMs),
-        routeShortName: t.routeShortName,
-        headsign: t.headsign,
-      };
-
-      if (DEBUG) {
-        console.debug(
-          `[gtfs] stop=${stopId} line=${t.routeShortName} tripId=${t.tripId} service=${t.serviceId}@${day.ymd} depMinutes=${t.departureMinutes} scheduledDeparture=${dep.scheduledDeparture.toISOString()}`
-        );
-      }
-
-      result.push(dep);
-    }
-  }
+  const result = tripsInWindow(trips, serviceCalendar, now, windowMinutes, lookbackMinutes);
 
   if (DEBUG) {
+    for (const r of result) {
+      console.debug(
+        `[gtfs] stop=${stopId} line=${r.routeShortName} tripId=${r.tripId} service=${r.serviceId}@${r.serviceDay} scheduledDeparture=${r.scheduledDeparture.toISOString()}`
+      );
+    }
     console.debug(`[gtfs] stop=${stopId}: ${result.length} trips in window`);
     // detect duplicates: same line + same scheduled minute
     const seen = new Map();

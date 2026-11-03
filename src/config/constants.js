@@ -11,6 +11,11 @@ export const REALTIME_MAX_AGE_MS = 180000;
 export const REALTIME_MAX_DELAY_MIN = 120;
 export const REALTIME_SMOOTHING = 0.5;
 
+export const FETCH_TIMEOUT_MS = 10000;
+export const GTFS_FETCH_TIMEOUT_MS = 120000;
+export const GTFS_RETRY_BASE_MS = 60000;
+export const GTFS_RETRY_MAX_MS = 60 * 60000;
+
 export const GTFS_URL =
   "https://kordis-jmk.cz/gtfs/gtfs.zip";
 export const VEHICLE_POSITIONS_URL = "https://kordis-jmk.cz/gtfs/gtfsReal.dat";

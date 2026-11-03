@@ -14,7 +14,7 @@ let configuredWindowMinutes = DEFAULT_WINDOW_MINUTES;
 
 const DEBUG = !!process.env.DEBUG;
 
-function mergeWithRealtime(trips, statusByTrip, now) {
+export function mergeWithRealtime(trips, statusByTrip, now) {
   const merged = [];
   for (const t of trips) {
     const status = statusByTrip.get(t.tripId);

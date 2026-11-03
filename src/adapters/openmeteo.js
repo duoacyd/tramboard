@@ -3,8 +3,7 @@
  * No API key required. Cache for 10 minutes.
  */
 
-import fetch from "node-fetch";
-import { OPENMETEO_URL, CACHE_TTL_WEATHER_MS } from "../config/constants.js";
+import { OPENMETEO_URL, CACHE_TTL_WEATHER_MS, FETCH_TIMEOUT_MS } from "../config/constants.js";
 
 const DEBUG = !!process.env.DEBUG;
 
@@ -63,7 +62,7 @@ export async function getWeatherBrno() {
   }
 
   try {
-    const res = await fetch(OPENMETEO_URL);
+    const res = await fetch(OPENMETEO_URL, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     if (!res.ok) throw new Error(`open-meteo ${res.status}`);
     const json = await res.json();
 

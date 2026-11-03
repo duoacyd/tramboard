@@ -10,10 +10,10 @@ Deployed on a self-hosted Linux server, running as a Docker container, auto-depl
 
 ## Tech stack
 
-- **Node.js 20**, ES modules (`"type": "module"` in package.json)
+- **Node.js 24**, ES modules (`"type": "module"` in package.json)
 - No framework — custom CSV parser, custom HTTP server (`http` stdlib), no transpilation
-- Two external deps: `adm-zip` (parse GTFS zip), `node-fetch` (HTTP requests)
-- Web display uses HTMX for live row updates; no frontend build pipeline
+- One external dep: `adm-zip` (parse GTFS zip); HTTP uses the built-in `fetch`, always with `AbortSignal.timeout`
+- Web display polls `/api/rows` with plain `fetch`, no client libraries and no CDN; no frontend build pipeline
 
 ## Key architecture
 
@@ -21,6 +21,7 @@ Deployed on a self-hosted Linux server, running as a Docker container, auto-depl
 index.js          polling loop (POLL_INTERVAL_MS, default 30s)
   └─ kordis.js    fetchDepartures() — merges GTFS + realtime delays
        ├─ kordis-gtfs-cache.js   in-memory GTFS (stops, routes, trips, calendar, stop_times)
+       │    └─ gtfs-schedule.js  pure: active services per day (calendar + calendar_dates), trips in a window
        └─ kordis-realtime.js     GTFS-RT vehicle positions → per-trip delay, cached 30s
   └─ openmeteo.js  weather, cached 10min
   └─ display/     terminal.js | web.js + web-data.js + web-renderer.js
@@ -46,11 +47,11 @@ DISPLAY_MODE=web npm start     # web only at http://localhost:3000
 npm start                      # terminal only
 ```
 
-No test suite — verify with the smoke test in CI (`node --check`) and manual testing.
+Tests use the built-in `node:test` runner (`npm test`, files in `test/`). They cover the pure timetable logic — service days, midnight, DST, holidays, the realtime merge. Keep that logic in pure functions (`gtfs-schedule.js`, `mergeWithRealtime`) so it stays testable without downloading the feed; check the web display manually.
 
 ## CI/CD
 
-- **ci.yml**: syntax check + ESM import smoke test on every push/PR
+- **ci.yml**: syntax check of every file, import of every module, and `npm test` on every push/PR (on `main` it runs alongside the deploy, it does not gate it)
 - **deploy.yml**: self-hosted runner auto-deploys on push to `main` via `scripts/rebuild.sh -y`
 - Runner runs on the production server as `sysadmin` user, working dir `/home/sysadmin/brno-tram-display`
 - Repo: `https://github.com/duoacyd/tramboard`

@@ -1,5 +1,4 @@
-import fetch from "node-fetch";
-import { NAMEDAY_URL, TIMEZONE } from "../config/constants.js";
+import { NAMEDAY_URL, TIMEZONE, FETCH_TIMEOUT_MS } from "../config/constants.js";
 
 let cached = null;
 let cachedDate = null;
@@ -31,7 +30,7 @@ export async function getNameday() {
   if (cached !== null && cachedDate === today) return cached;
 
   try {
-    const res = await fetch(NAMEDAY_URL);
+    const res = await fetch(NAMEDAY_URL, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     if (!res.ok) throw new Error(`nameday ${res.status}`);
     const json = await res.json();
     if (!json?.data?.sk && !json?.data?.cz) throw new Error("unexpected nameday response shape");

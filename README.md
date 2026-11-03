@@ -15,8 +15,11 @@ Real-time departure board for Brno trams — terminal and web. Uses free Czech o
 # Docker (recommended)
 docker compose up --build
 
-# Local
+# Local (Node 24+)
 npm install && npm start
+
+# Tests
+npm test
 ```
 
 Web interface available at `http://localhost:3000` when running in `web` or `both` mode. With Docker it is published on host port `3001`.
@@ -41,6 +44,7 @@ src/
 ├── adapters/
 │   ├── kordis.js           # public API: fetchDepartures, searchStops
 │   ├── kordis-gtfs-cache.js    # GTFS zip download, parse, in-memory cache
+│   ├── gtfs-schedule.js        # services running per day (incl. holidays), trips in a time window
 │   ├── kordis-realtime.js      # GTFS-RT vehicle positions → per-trip delay
 │   └── openmeteo.js            # weather fetch (temperature, sunrise/sunset)
 ├── config/
@@ -50,15 +54,15 @@ src/
 │   ├── terminal.js         # ANSI terminal rendering
 │   ├── web.js              # HTTP server & routing
 │   ├── web-data.js         # data assembly and deduplication for web
-│   └── web-renderer.js     # HTML/CSS/JS renderer, HTMX polling
+│   └── web-renderer.js     # HTML/CSS/JS renderer, row polling
 └── utils/
     ├── csv.js              # custom CSV parser (handles GTFS quoted fields)
     ├── string.js           # accent-insensitive search normalization
     └── time.js             # Prague timezone, GTFS overflow time handling
 res/                        # static logo images served by web display
 scripts/
-├── rebuild.sh         # production redeploy script
-└── setup-runner.sh         # GitHub Actions self-hosted runner setup
+└── rebuild.sh              # production redeploy script
+test/                       # node:test unit tests (npm test)
 ```
 
 ## Configure stops

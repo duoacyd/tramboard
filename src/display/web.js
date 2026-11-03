@@ -3,7 +3,7 @@
  *
  * GET /                  → HTML board
  * GET /api/departures    → JSON
- * GET /api/rows          → HTML <tr> fragment (HTMX, fingerprinted via X-Rows-Fingerprint)
+ * GET /api/rows          → HTML <tr> fragment, polled every 15s (fingerprinted via X-Rows-Fingerprint)
  * GET /api/weather       → JSON  { tempCelsius, sunrise, sunset }
  */
 

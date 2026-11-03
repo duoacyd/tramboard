@@ -121,6 +121,10 @@ body.sunset td.mins .n{color:#ffd080}
 body.sunset td.time{color:#ffccaa}
 body.sunset .late{background:#e01818;box-shadow:0 0 0 3px #ffe8d0}
 body.night .city-logo,body.sunset .city-logo{filter:invert(1)}
+table{transition:opacity 1s}
+body.offline table{opacity:0.3}
+#offline{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);padding:4px 28px 8px;border-radius:999px;background:#e02424;color:#fff;font-size:34px;white-space:nowrap}
+#offline:empty{display:none}
 @media (max-width:1200px){
 #topbar{row-gap:2px}
 #clock-block{display:contents}
@@ -133,6 +137,7 @@ const CLIENT_JS = `
 (function(){
   var srISO=window._SR||'',ssISO=window._SS||'',currentFp='',flipTimer=null;
   var STAGGER=320,FLIP_OUT_DURATION=880;
+  var ROWS_POLL_MS=15000,ROWS_TIMEOUT_MS=10000,OFFLINE_AFTER_MS=120000,lastRowsOk=Date.now();
   function n(v){return '<span class="n">'+v+'</span>';}
   function fmt(diff){
     if(diff<=0) return 'now';
@@ -223,22 +228,15 @@ const CLIENT_JS = `
     if(ot&&nt)ot.innerHTML=nt.innerHTML;
     tr.dataset.min=newTr.dataset.min;
   }
-  document.body.addEventListener('htmx:configRequest',function(evt){
-    evt.detail.headers['X-Rows-Fingerprint']=currentFp;
-  });
-  document.body.addEventListener('htmx:beforeSwap',function(evt){
-    if(!evt.detail.serverResponse) return;
-    var fp=evt.detail.xhr&&evt.detail.xhr.getResponseHeader('X-Rows-Fingerprint');
-    if(fp) currentFp=fp;
-    evt.detail.shouldSwap=false;
-    var tbody=evt.detail.target;
+  function applyRows(html){
+    var tbody=document.getElementById('rows');
     // the flip-out wave only plays when a row has actually departed; otherwise
     // still swap in the fresh data immediately — a frozen table is worse than a missed animation
     var hasDeparted=Array.from(tbody.querySelectorAll('td.mins')).some(function(el){
       return el.classList.contains('is-departed');
     });
     var tmp=document.createElement('tbody');
-    tmp.innerHTML=evt.detail.serverResponse;
+    tmp.innerHTML=html;
     var newRows=Array.from(tmp.querySelectorAll('tr'));
     var oldMap={};
     tbody.querySelectorAll('tr').forEach(function(tr){if(tr.dataset.key)oldMap[tr.dataset.key]=tr;});
@@ -303,11 +301,38 @@ const CLIENT_JS = `
         });
       });});
     },flipOutMs);
-  });
+  }
+  function updateOffline(){
+    var age=Date.now()-lastRowsOk,offline=age>OFFLINE_AFTER_MS;
+    document.body.classList.toggle('offline',offline);
+    var el=document.getElementById('offline'),min=Math.floor(age/60000);
+    if(el) el.textContent=offline?'offline '+(min<60?min+'m':Math.floor(min/60)+'h '+(min%60)+'m'):'';
+  }
+  function pollRows(){
+    var ctrl=window.AbortController?new AbortController():null;
+    var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},ROWS_TIMEOUT_MS);
+    fetch('/api/rows',{headers:{'X-Rows-Fingerprint':currentFp},cache:'no-store',signal:ctrl?ctrl.signal:undefined})
+      .then(function(r){
+        if(r.status===204){lastRowsOk=Date.now();return;}
+        if(!r.ok) throw new Error('rows '+r.status);
+        return r.text().then(function(html){
+          lastRowsOk=Date.now();
+          currentFp=r.headers.get('X-Rows-Fingerprint')||'';
+          applyRows(html);
+        });
+      })
+      .catch(function(){})
+      .then(function(){
+        clearTimeout(timeout);
+        updateOffline();
+        setTimeout(pollRows,ROWS_POLL_MS);
+      });
+  }
   requestAnimationFrame(function(){requestAnimationFrame(function(){document.body.classList.remove('no-transition');});});
   tickCountdowns();
   tickClock();
   tickDate();
+  setTimeout(pollRows,ROWS_POLL_MS);
   setInterval(tickClock,1000);
   setInterval(tickDate,60000);
   setInterval(tickCountdowns,3000);
@@ -354,7 +379,7 @@ function buildRows(departures) {
   }).join("");
 }
 
-/** HTMX fragment — new rows get enter animation; existing rows are identified by data-key. */
+/** Polled row fragment — new rows get enter animation; existing rows are identified by data-key. */
 export function renderRows(departures) {
   return departures.map((d) => {
     const { iso, key, delayAttr, logoHtml } = buildRow(d);
@@ -419,7 +444,6 @@ export function renderHtml(departures, weather, nameday = null, preview = null) 
 <meta name="color-scheme" content="light dark">
 <title>Trams</title>
 <style>${CSS}</style>
-<script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
 </head>
 <body class="no-transition ${mode}">
 <script>window._SR=${JSON.stringify(sunrise)};window._SS=${JSON.stringify(sunset)};</script>
@@ -437,7 +461,8 @@ export function renderHtml(departures, weather, nameday = null, preview = null) 
     <div id="temp"><span id="temp-value">${tempHtml}</span><span id="temp-apparent">${apparentHtml}</span></div>
   </div>
 </div>
-<table><tbody hx-get="/api/rows" hx-trigger="every 15s" hx-swap="innerHTML">${buildRows(departures)}</tbody></table>
+<table><tbody id="rows">${buildRows(departures)}</tbody></table>
+<div id="offline"></div>
 <script>${CLIENT_JS}</script>
 ${preview?.cycle ? buildCycleScript(preview) : ""}
 </body>
