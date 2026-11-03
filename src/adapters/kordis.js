@@ -8,18 +8,22 @@ import {
   setRefreshIntervalMs,
 } from "./kordis-gtfs-cache.js";
 import { getDelaysByTrip } from "./kordis-realtime.js";
-import { DEFAULT_WINDOW_MINUTES } from "../config/constants.js";
+import { DEFAULT_WINDOW_MINUTES, REALTIME_MAX_DELAY_MIN } from "../config/constants.js";
 
 let configuredWindowMinutes = DEFAULT_WINDOW_MINUTES;
 
 const DEBUG = !!process.env.DEBUG;
 
-function mergeWithRealtime(trips, delaysByTrip) {
-  return trips.map((t) => {
-    const delayMinutes = delaysByTrip.get(t.tripId);
-    const hasRealtime = delayMinutes != null && !Number.isNaN(delayMinutes);
-    const time = new Date(t.scheduledDeparture);
-    if (hasRealtime) time.setMinutes(time.getMinutes() + delayMinutes);
+function mergeWithRealtime(trips, statusByTrip, now) {
+  const merged = [];
+  for (const t of trips) {
+    const status = statusByTrip.get(t.tripId);
+    const hasRealtime = status != null;
+    // the vehicle's next stop is further along the trip than ours: it has already left
+    if (hasRealtime && status.nextStopSequence > t.stopSequence) continue;
+    const delayMinutes = hasRealtime ? status.delayMinutes : 0;
+    const time = new Date(t.scheduledDeparture.getTime() + delayMinutes * 60000);
+    if (time < now) continue;
 
     if (DEBUG) {
       console.debug(
@@ -27,7 +31,7 @@ function mergeWithRealtime(trips, delaysByTrip) {
       );
     }
 
-    return {
+    merged.push({
       time,
       scheduledTime: new Date(t.scheduledDeparture),
       tripId: t.tripId,
@@ -37,20 +41,23 @@ function mergeWithRealtime(trips, delaysByTrip) {
       headsign: t.headsign ?? "",
       routeType: "0",
       rtStatus: hasRealtime ? "updated" : "scheduled",
-    };
-  });
+    });
+  }
+  return merged;
 }
 
 export async function fetchDepartures(stopId, _query, options = {}) {
   const windowMinutes = options.windowMinutes ?? configuredWindowMinutes;
-  const trips = await getUpcomingTripsForStop(stopId, windowMinutes);
-  let delaysByTrip = new Map();
+  const now = new Date();
+  // look back as far as a delay can reach, otherwise a late tram vanishes at its scheduled time
+  const trips = await getUpcomingTripsForStop(stopId, windowMinutes, REALTIME_MAX_DELAY_MIN, now);
+  let statusByTrip = new Map();
   try {
-    delaysByTrip = await getDelaysByTrip();
+    statusByTrip = await getDelaysByTrip();
   } catch (err) {
     console.warn("kordis realtime fetch failed, using schedule only:", err.message);
   }
-  return mergeWithRealtime(trips, delaysByTrip);
+  return mergeWithRealtime(trips, statusByTrip, now);
 }
 
 export async function searchStops(name) {

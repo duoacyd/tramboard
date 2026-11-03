@@ -72,11 +72,7 @@ function fractionAlongSegment(vehicle, a, b) {
 // Delay = report time minus the scheduled time at the vehicle's position between its
 // previous and next stop. Comparing only against the next stop would show a vehicle as
 // late just once it is already past that stop's scheduled time.
-function estimateDelayMs(vehicle) {
-  const stops = getTripStops(vehicle.tripId);
-  const idx = stops?.findIndex((s) => s.stopId === vehicle.stopId) ?? -1;
-  if (idx < 0) return null;
-
+function estimateDelayMs(vehicle, stops, idx) {
   const next = stops[idx];
   const scheduledNext = dateForGtfsMinutesNear(next.arrivalMinutes, vehicle.timestampMs).getTime();
   const prev = stops[idx - 1];
@@ -105,8 +101,10 @@ async function fetchTripDelays() {
   let delayed = 0;
   for (const v of vehicles) {
     if (now - v.timestampMs > REALTIME_MAX_AGE_MS) continue;
-    const rawMs = estimateDelayMs(v);
-    if (rawMs == null) continue;
+    const stops = getTripStops(v.tripId);
+    const idx = stops?.findIndex((s) => s.stopId === v.stopId) ?? -1;
+    if (idx < 0) continue;
+    const rawMs = estimateDelayMs(v, stops, idx);
     // GPS and schedule rounding make single readings jump around the 1-minute mark
     const previousMs = smoothedDelayMs.get(v.tripId);
     const delayMs = previousMs == null
@@ -115,14 +113,14 @@ async function fetchTripDelays() {
     nextSmoothed.set(v.tripId, delayMs);
     const delayMin = Math.floor(Math.max(0, delayMs) / 60000);
     if (delayMin > REALTIME_MAX_DELAY_MIN) continue;
-    delays.set(v.tripId, delayMin);
+    delays.set(v.tripId, { delayMinutes: delayMin, nextStopSequence: stops[idx].seq });
     if (delayMin > 0) delayed++;
   }
   smoothedDelayMs = nextSmoothed;
 
   console.log(`[realtime] ${vehicles.length} vehicles → ${delays.size} matched to schedule, ${delayed} delayed`);
   if (DEBUG && delayed > 0) {
-    const summary = [...delays.entries()].filter(([, d]) => d > 0).map(([k, v]) => `${k}:+${v}min`).join(" ");
+    const summary = [...delays.entries()].filter(([, s]) => s.delayMinutes > 0).map(([k, s]) => `${k}:+${s.delayMinutes}min`).join(" ");
     console.debug(`[realtime] delays: ${summary}`);
   }
   return delays;

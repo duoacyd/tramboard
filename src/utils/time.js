@@ -28,11 +28,19 @@ export function formatDateForCalendar(d) {
 }
 
 /**
- * Day of week (0=Sunday..6=Saturday) in Prague local time.
+ * The Prague calendar day offsetDays away from d, as a GTFS service day:
+ * ymd (YYYYMMDD), dayOfWeek (0=Sunday..6=Saturday) and startMs, the instant GTFS
+ * times on that day count from (noon minus 12h, so 25:00 lands right across DST).
  */
-export function dayOfWeekPrague(d) {
-  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: TIMEZONE, weekday: "short" }).format(d);
-  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
+export function pragueServiceDay(d, offsetDays = 0) {
+  const [year, month, day] = d.toLocaleDateString("en-CA", { timeZone: TIMEZONE }).split("-").map(Number);
+  // 12:00 UTC falls on the same calendar date in Prague
+  const noon = new Date(Date.UTC(year, month - 1, day + offsetDays, 12));
+  return {
+    ymd: noon.toISOString().slice(0, 10).replaceAll("-", ""),
+    dayOfWeek: noon.getUTCDay(),
+    startMs: dateFromMinutesSinceMidnight(noon, 0).getTime(),
+  };
 }
 
 /**

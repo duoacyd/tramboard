@@ -38,8 +38,9 @@ async function serveStatic(filename) {
   }
 }
 
+// includes the delay-adjusted time, otherwise a new delay on the same trips is answered with 204
 function rowsFingerprint(deps) {
-  return deps.map(d => d.tripId ?? `${d.routeShortName}|${d.stopName}|${d.time.toISOString()}`).join(",");
+  return deps.map(d => `${d.tripId ?? `${d.routeShortName}|${d.stopName}`}@${d.time.toISOString()}`).join(",");
 }
 
 const PREVIEW_WEATHER = { clear: null, drizzle: "🌦", rain: "🌧", snow: "🌨", storm: "⛈" };

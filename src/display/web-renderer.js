@@ -213,6 +213,16 @@ const CLIENT_JS = `
       })
       .catch(function(){});
   }
+  function syncRow(tr,newTr){
+    var om=tr.querySelector('.mins'),nm=newTr.querySelector('.mins');
+    var ot=tr.querySelector('.time'),nt=newTr.querySelector('.time');
+    if(om&&nm){
+      om.dataset.time=nm.dataset.time;
+      if(nm.dataset.delay)om.dataset.delay=nm.dataset.delay;else delete om.dataset.delay;
+    }
+    if(ot&&nt)ot.innerHTML=nt.innerHTML;
+    tr.dataset.min=newTr.dataset.min;
+  }
   document.body.addEventListener('htmx:configRequest',function(evt){
     evt.detail.headers['X-Rows-Fingerprint']=currentFp;
   });
@@ -232,6 +242,14 @@ const CLIENT_JS = `
     var newRows=Array.from(tmp.querySelectorAll('tr'));
     var oldMap={};
     tbody.querySelectorAll('tr').forEach(function(tr){if(tr.dataset.key)oldMap[tr.dataset.key]=tr;});
+    var keysOf=function(rows){return rows.map(function(tr){return tr.dataset.key;}).join(',');};
+    // same rows in the same order means only a time or delay moved: update quietly
+    // instead of flipping the whole board on every delay change
+    if(!hasDeparted&&!flipTimer&&keysOf(newRows)===keysOf(Array.from(tbody.querySelectorAll('tr[data-key]')))){
+      newRows.forEach(function(newTr){syncRow(oldMap[newTr.dataset.key],newTr);});
+      tickCountdowns();
+      return;
+    }
     var allRows=Array.from(tbody.querySelectorAll('tr'));
     // cancel any pending flip-in from a previous update
     if(flipTimer)clearTimeout(flipTimer);
@@ -257,14 +275,7 @@ const CLIENT_JS = `
           tr.classList.remove('flip-out','flip-in');
           tr.classList.add('pre-flip');
           tr.style.animationDelay='';
-          var om=tr.querySelector('.mins'),nm=newTr.querySelector('.mins');
-          var ot=tr.querySelector('.time'),nt=newTr.querySelector('.time');
-          if(om&&nm){
-            om.dataset.time=nm.dataset.time;
-            if(nm.dataset.delay)om.dataset.delay=nm.dataset.delay;else delete om.dataset.delay;
-          }
-          if(ot&&nt)ot.innerHTML=nt.innerHTML;
-          tr.dataset.min=newTr.dataset.min;
+          syncRow(tr,newTr);
         }else{
           tr=newTr;
           tr.classList.remove('enter','flip-out','flip-in');

@@ -6,12 +6,9 @@ import AdmZip from "adm-zip";
 import fetch from "node-fetch";
 import { parseCsv } from "../utils/csv.js";
 import {
-  formatDateForCalendar,
-  dayOfWeekPrague,
   gtfsTimeToMinutesSinceMidnight,
-  minutesSinceMidnightPrague,
-  nowInPrague,
   dateFromMinutesSinceMidnight,
+  pragueServiceDay,
 } from "../utils/time.js";
 import { normalizeForSearch } from "../utils/string.js";
 import {
@@ -43,19 +40,44 @@ function extractAndParse(zip, filename) {
   return parseCsv(entry.getData().toString("utf8"));
 }
 
-function getActiveServiceIds(calendar, now) {
-  const today = formatDateForCalendar(now);
-  const dow = dayOfWeekPrague(now);
-  const dayCol = CALENDAR_DAY_COLUMNS[dow];
-  const active = new Set();
+function buildServiceCalendar(calendar, calendarDates) {
+  const weekly = [];
   for (const row of calendar) {
+    const serviceId = row.service_id ?? row.serviceid;
     const start = row.start_date ?? row.startdate;
     const end = row.end_date ?? row.enddate;
-    if (!start || !end || today < start || today > end) continue;
-    if (row[dayCol] === "1") {
-      active.add(row.service_id ?? row.serviceid);
-    }
+    if (!serviceId || !start || !end) continue;
+    weekly.push({ serviceId, start, end, days: CALENDAR_DAY_COLUMNS.map((col) => row[col] === "1") });
   }
+
+  // holidays and one-off days: exception_type 1 adds a service, 2 removes it
+  const exceptions = new Map();
+  for (const row of calendarDates) {
+    const serviceId = row.service_id ?? row.serviceid;
+    const type = row.exception_type ?? row.exceptiontype;
+    if (!serviceId || !row.date) continue;
+    const day = exceptions.get(row.date) ?? { added: new Set(), removed: new Set() };
+    if (type === "1") day.added.add(serviceId);
+    if (type === "2") day.removed.add(serviceId);
+    exceptions.set(row.date, day);
+  }
+
+  return { weekly, exceptions, activeByDate: new Map() };
+}
+
+function activeServiceIds(serviceCalendar, day) {
+  const known = serviceCalendar.activeByDate.get(day.ymd);
+  if (known) return known;
+
+  const active = new Set();
+  for (const s of serviceCalendar.weekly) {
+    if (s.days[day.dayOfWeek] && day.ymd >= s.start && day.ymd <= s.end) active.add(s.serviceId);
+  }
+  const exceptions = serviceCalendar.exceptions.get(day.ymd);
+  exceptions?.added.forEach((id) => active.add(id));
+  exceptions?.removed.forEach((id) => active.delete(id));
+
+  serviceCalendar.activeByDate.set(day.ymd, active);
   return active;
 }
 
@@ -86,20 +108,18 @@ function buildRoutesMap(routes) {
   return map;
 }
 
-function buildTripsMap(trips, routesMap, activeServiceIds) {
-  const serviceFilter =
-    activeServiceIds.size > 0
-      ? (sid) => activeServiceIds.has(sid)
-      : () => true;
-
+// every service is kept: which ones run is decided per query, so the cache stays
+// correct across midnight and holidays no matter when it was downloaded
+function buildTripsMap(trips, routesMap) {
   const map = new Map();
   for (const row of trips) {
     const id = row.trip_id ?? row.tripid;
-    if (!id || !serviceFilter(row.service_id ?? row.serviceid)) continue;
+    if (!id) continue;
     const route = routesMap.get(row.route_id ?? row.routeid);
     if (!route || !GTFS_INCLUDED_ROUTE_TYPES.has(String(route.routeType))) continue;
     map.set(id, {
       routeId: row.route_id ?? row.routeid,
+      serviceId: row.service_id ?? row.serviceid,
       headsign: row.trip_headsign ?? row.tripheadsign ?? "",
       routeShortName: route.routeShortName,
     });
@@ -119,14 +139,13 @@ function buildStopTimesByStop(stopTimes, tripsMap) {
     const arr = byStop.get(stopId) ?? [];
     arr.push({
       tripId,
-      departureTime: depTime,
+      serviceId: trip.serviceId,
+      stopSequence: parseInt(row.stop_sequence ?? row.stopsequence, 10) || 0,
+      departureMinutes: gtfsTimeToMinutesSinceMidnight(depTime),
       routeShortName: trip.routeShortName,
       headsign: trip.headsign,
     });
     byStop.set(stopId, arr);
-  }
-  for (const arr of byStop.values()) {
-    arr.sort((a, b) => a.departureTime.localeCompare(b.departureTime));
   }
   return byStop;
 }
@@ -152,20 +171,31 @@ function buildTripStops(stopTimes, tripsMap) {
   return byTrip;
 }
 
-function buildLookups(stops, routes, trips, stopTimes, calendar) {
-  const now = new Date();
-  const activeServiceIds = getActiveServiceIds(calendar, now);
+function buildLookups(stops, routes, trips, stopTimes, calendar, calendarDates) {
+  const serviceCalendar = buildServiceCalendar(calendar, calendarDates);
   const stopsMap = buildStopsMap(stops);
   const routesMap = buildRoutesMap(routes);
-  const tripsMap = buildTripsMap(trips, routesMap, activeServiceIds);
+  const tripsMap = buildTripsMap(trips, routesMap);
   const stopTimesByStop = buildStopTimesByStop(stopTimes, tripsMap);
   const tripStops = buildTripStops(stopTimes, tripsMap);
+  const today = pragueServiceDay(new Date());
+  const activeToday = activeServiceIds(serviceCalendar, today);
+  if (activeToday.size === 0) console.warn(`[gtfs] no services active on ${today.ymd} — the feed may have expired`);
   console.log(
     `[gtfs] parsed: ${stopsMap.size} stops, ${routesMap.size} routes, ` +
-    `${trips.length} trips (${tripsMap.size} active today), ` +
+    `${trips.length} trips, ${serviceCalendar.weekly.length} services (${activeToday.size} active today, ` +
+    `${serviceCalendar.exceptions.size} exception dates), ` +
     `${stopTimes.length} stop_times → ${stopTimesByStop.size} stops with departures`
   );
-  return { stopsMap, stopTimesByStop, tripStops };
+  return { stopsMap, stopTimesByStop, tripStops, serviceCalendar };
+}
+
+function extractOptional(zip, filename) {
+  try {
+    return extractAndParse(zip, filename);
+  } catch {
+    return [];
+  }
 }
 
 async function downloadAndBuildCache() {
@@ -184,14 +214,10 @@ async function downloadAndBuildCache() {
   const routes = extractAndParse(zip, "routes.txt");
   const trips = extractAndParse(zip, "trips.txt");
   const stopTimes = extractAndParse(zip, "stop_times.txt");
-  let calendar = [];
-  try {
-    calendar = extractAndParse(zip, "calendar.txt");
-  } catch {
-    // calendar_dates.txt fallback not implemented
-  }
+  const calendar = extractOptional(zip, "calendar.txt");
+  const calendarDates = extractOptional(zip, "calendar_dates.txt");
 
-  cache = buildLookups(stops, routes, trips, stopTimes, calendar);
+  cache = buildLookups(stops, routes, trips, stopTimes, calendar, calendarDates);
   lastFetchTime = Date.now();
   const nextRefreshMin = Math.round(refreshIntervalMs / 60000);
   console.log(`[gtfs] next refresh in ${nextRefreshMin >= 60 ? (nextRefreshMin / 60).toFixed(0) + "h" : nextRefreshMin + "min"}`);
@@ -214,37 +240,43 @@ async function ensureCache() {
 
 const DEBUG = !!process.env.DEBUG;
 
-export async function getUpcomingTripsForStop(stopId, windowMinutes) {
-  const { stopTimesByStop } = await ensureCache();
+// lookbackMinutes keeps trips whose scheduled time has passed, so a late vehicle
+// can still be shown once its delay is applied
+export async function getUpcomingTripsForStop(stopId, windowMinutes, lookbackMinutes = 0, now = new Date()) {
+  const { stopTimesByStop, serviceCalendar } = await ensureCache();
   const trips = stopTimesByStop.get(stopId);
   if (!trips?.length) return [];
 
-  const pragueNow = nowInPrague();
-  const nowMinutes = minutesSinceMidnightPrague(pragueNow);
-  const windowEnd = nowMinutes + windowMinutes;
-  const dayMinutes = 24 * 60;
+  const fromMs = now.getTime() - lookbackMinutes * 60000;
+  const toMs = now.getTime() + windowMinutes * 60000;
 
   const result = [];
-  for (const t of trips) {
-    let depMinutes = gtfsTimeToMinutesSinceMidnight(t.departureTime);
-    const wrapped = depMinutes < nowMinutes - 60;
-    if (wrapped) depMinutes += dayMinutes;
-    if (depMinutes < nowMinutes || depMinutes > windowEnd) continue;
+  // GTFS times run past 24:00, so yesterday's service is still running after midnight
+  // and tomorrow's can start inside a window that crosses midnight
+  for (const offsetDays of [-1, 0, 1]) {
+    const day = pragueServiceDay(now, offsetDays);
+    const active = activeServiceIds(serviceCalendar, day);
+    for (const t of trips) {
+      if (!active.has(t.serviceId)) continue;
+      const scheduledMs = day.startMs + Math.round(t.departureMinutes * 60000);
+      if (scheduledMs < fromMs || scheduledMs > toMs) continue;
 
-    const dep = {
-      tripId: t.tripId,
-      scheduledDeparture: dateFromMinutesSinceMidnight(pragueNow, depMinutes),
-      routeShortName: t.routeShortName,
-      headsign: t.headsign,
-    };
+      const dep = {
+        tripId: t.tripId,
+        stopSequence: t.stopSequence,
+        scheduledDeparture: new Date(scheduledMs),
+        routeShortName: t.routeShortName,
+        headsign: t.headsign,
+      };
 
-    if (DEBUG) {
-      console.debug(
-        `[gtfs] stop=${stopId} line=${t.routeShortName} tripId=${t.tripId} rawTime=${t.departureTime} depMinutes=${depMinutes} wrapped=${wrapped} scheduledDeparture=${dep.scheduledDeparture.toISOString()}`
-      );
+      if (DEBUG) {
+        console.debug(
+          `[gtfs] stop=${stopId} line=${t.routeShortName} tripId=${t.tripId} service=${t.serviceId}@${day.ymd} depMinutes=${t.departureMinutes} scheduledDeparture=${dep.scheduledDeparture.toISOString()}`
+        );
+      }
+
+      result.push(dep);
     }
-
-    result.push(dep);
   }
 
   if (DEBUG) {
